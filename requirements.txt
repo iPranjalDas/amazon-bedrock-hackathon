@@ -1,0 +1,9 @@
+# Sentinel+ (Alexa+ Autonomous Infrastructure & Code Sentry)
+# Core Production Dependencies
+
+pydantic>=2.10.0
+fastapi>=0.115.0
+uvicorn>=0.32.0
+boto3>=1.35.0
+requests>=2.32.0
+pytest>=8.3.0

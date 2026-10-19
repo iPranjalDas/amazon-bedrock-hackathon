@@ -1,0 +1,27 @@
+# Python and Dependency Folders
+packages/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Secrets and Environment Variables
+.env
+.env.*
+!.env.example
+credentials.txt
+*.pem
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Distribution and logs
+dist/
+build/
+*.egg-info/
+*.log

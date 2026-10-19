@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel+ | Alexa+ Autonomous Infrastructure Sentry Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <header class="top-nav">
+            <div class="brand">
+                <div class="pulse-indicator"></div>
+                <div class="brand-text">
+                    <h1>SENTINEL<span>+</span></h1>
+                    <span class="sub-badge">ALEXA+ MCP STREAMABLE HTTP SENTRY</span>
+                </div>
+            </div>
+            <div class="stream-status" id="streamStatus">
+                <span class="status-dot online"></span>
+                <span class="status-label">SSE TELEMETRY ACTIVE (PORT 8000)</span>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <main class="dashboard-grid">
+            <!-- Left Column: Voice & Interaction Simulator -->
+            <section class="panel interaction-panel">
+                <div class="panel-header">
+                    <h2>🎙️ Alexa+ Voice & Multimodal Simulator</h2>
+                    <span class="badge loop-it-badge">Loop It! Touch/Voice Parity</span>
+                </div>
+
+                <!-- Waveform Canvas -->
+                <div class="waveform-container">
+                    <canvas id="waveformCanvas" width="480" height="90"></canvas>
+                    <div class="apla-ducking-tag" id="duckingTag">APLA DUCKING: 25% AMBIENT HUM</div>
+                </div>
+
+                <!-- Input Controls -->
+                <div class="voice-input-card">
+                    <div class="input-wrapper">
+                        <input type="text" id="voiceQueryInput" placeholder="Ask Alexa+: 'is port 3000 free?', 'audit repository', 'kill PID 8492'..." />
+                        <button id="speakBtn" class="btn-primary"><span>Transmit</span></button>
+                    </div>
+
+                    <!-- Instant Test Presets -->
+                    <div class="presets-row">
+                        <button class="preset-chip" data-query="is port 3000 free?">⚡ Fast Path (< 10ms)</button>
+                        <button class="preset-chip" data-query="audit the repository for socket leaks">🧠 AegisAgent Audit</button>
+                        <button class="preset-chip" data-query="kill PID 8492">🛡️ 2PC Safety Gate</button>
+                        <button class="preset-chip" data-query="stream ambient acoustic telemetry">🎛️ APLA Audio</button>
+                    </div>
+                </div>
+
+                <!-- Alexa Speech Output -->
+                <div class="speech-output-card">
+                    <div class="speech-label">ALEXA+ SPOKEN RESPONSE:</div>
+                    <div class="speech-bubble" id="speechBubble">
+                        "Sentinel+ standing by. Listening for infrastructure queries or security incidents."
+                    </div>
+                    <div class="latency-metrics" id="latencyMetrics">
+                        <span>LATENCY: <b>0.0 ms</b></span> | <span>ROUTE: <b>IDLE</b></span> | <span>SECURITY: <b>VERIFIED</b></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Live Telemetry & Metrics -->
+            <section class="panel telemetry-panel">
+                <div class="panel-header">
+                    <h2>📊 Deterministic Procfs Telemetry</h2>
+                    <span class="badge oracus-badge">Oracus Hard Math First</span>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-val" id="metricListeners">0</div>
+                        <div class="metric-title">Active Listeners</div>
+                    </div>
+                    <div class="metric-card danger-card">
+                        <div class="metric-val" id="metricZombies">0</div>
+                        <div class="metric-title">Zombie PIDs Detected</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-val" id="metricScanned">8</div>
+                        <div class="metric-title">Ports Audited</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-val" id="metricRisk">LOW</div>
+                        <div class="metric-title">Infrastructure Risk</div>
+                    </div>
+                </div>
+
+                <!-- Inspected Ports Table -->
+                <div class="ports-table-wrapper">
+                    <table class="ports-table">
+                        <thead>
+                            <tr>
+                                <th>PORT</th>
+                                <th>PROCESS</th>
+                                <th>PID</th>
+                                <th>STATE</th>
+                                <th>MEMORY</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portsTableBody">
+                            <tr>
+                                <td colspan="6" class="empty-state">No socket leaks detected. All target ports clean.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Bottom Left: Multi-Agent Reasoning Trace -->
+            <section class="panel agents-panel">
+                <div class="panel-header">
+                    <h2>🤖 AegisAgent Triad Reasoning Trace</h2>
+                    <span class="badge aegis-badge">Inspector ➔ Auditor ➔ Fixer</span>
+                </div>
+                <div class="trace-feed" id="traceFeed">
+                    <div class="trace-entry inspector">
+                        <div class="trace-badge">INSPECTOR AGENT</div>
+                        <div class="trace-text">Ready to curate procfs socket inodes and AST repository handlers.</div>
+                    </div>
+                    <div class="trace-entry auditor">
+                        <div class="trace-badge">AUDITOR CRITIC</div>
+                        <div class="trace-text">Zero-trust safety rules loaded. 2PC gate enforced for mutations.</div>
+                    </div>
+                    <div class="trace-entry fixer">
+                        <div class="trace-badge">REMEDIATION FIXER</div>
+                        <div class="trace-text">Sandbox patch engine standing by to generate GitHub PRs.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Right: Amazon Friction Log & MCP Protocols -->
+            <section class="panel friction-panel">
+                <div class="panel-header">
+                    <h2>📝 Amazon Developer Friction Log</h2>
+                    <span class="badge bonus-badge">+10% Stage 1 Bonus RFC</span>
+                </div>
+                <div class="friction-card">
+                    <div class="rfc-title">RFC-2026-04: Streamable HTTP MCP Standard for Alexa+</div>
+                    <div class="rfc-body">
+                        <p><b>Observation:</b> Developers building advanced autonomous tools for Alexa+ face an ecosystem barrier: existing tools default to local stdio transports, whereas modern microservices require <b>Streamable HTTP (SSE)</b> with JSON-RPC 2.0.</p>
+                        <p><b>Sentinel+ Fix:</b> Provides an open-source reference server implementing low-latency SSE broadcasting, token-bucket concurrency, and declarative APLA volume ducking.</p>
+                    </div>
+                    <div class="mcp-endpoints">
+                        <span>ENDPOINT: <code>/mcp/call</code></span>
+                        <span>TRANSPORT: <code>HTTP SSE</code></span>
+                        <span>SPECS: <code>agentskills.io</code></span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="simulator.js"></script>
+</body>
+</html>
