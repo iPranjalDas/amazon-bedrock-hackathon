@@ -1,3 +1,4 @@
+// //PRANJAL DAS
 // Sentinel+ Alexa+ Web Simulator Controller (web/simulator.js)
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("voiceQueryInput");
