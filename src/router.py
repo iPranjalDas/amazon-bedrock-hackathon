@@ -1,10 +1,15 @@
 # //PRANJAL DAS
 """
-Sentinel+ Dual-Path Ingress Router (src/router.py)
-Implements the GodlyDonuts/sai Dual-Path Routing Pattern:
-- FAST PATH (< 250ms): Direct deterministic execution for simple CLI/OS status queries.
-- AGENTIC PATH: Multi-turn Bedrock ConverseStream loop for complex code audits.
-- 2PC DESTRUCTIVE GATE: State mutation guard requiring explicit developer confirmation.
+Sentinel+ Ingress Router (src/router.py)
+Author: Pranjal Das //PRANJAL DAS
+
+Engineered for: Build, Ship, Shape: Amazon Developer Hackathon (2026)
+Design pattern: Dual-Path Ingress Router.
+Voice assistants feel sluggish when simple queries ("is port 3000 free?") trigger
+a 3-second multi-turn LLM inference loop. We bifurcate the ingress:
+1. Fast Path (< 10ms): Simple status and port queries execute immediately in Python.
+2. Destructive 2PC Gate: Catches kill/drain requests and pauses for user confirmation.
+3. Agentic Path: Deep multi-turn investigation only when deep code/repo reasoning is asked.
 """
 import os
 import re
@@ -26,7 +31,6 @@ try:
     HAS_PYDANTIC = True
 except ImportError:
     HAS_PYDANTIC = False
-    from dataclasses import dataclass, asdict
 
 if HAS_PYDANTIC:
     class RoutingDecision(BaseModel):
@@ -73,12 +77,14 @@ else:
             return self.__dict__
 
 
+# High-frequency developer status phrases matched via regex for instant response
 FAST_PATH_PATTERNS = [
     (r"\b(check|status|health|ping|listeners?|open ports?|is.*free|is.*running)\b", "port_status"),
     (r"\b(who.*listening|what.*running|system sentry info)\b", "system_info"),
     (r"\b(list zombies?|find zombies?|show processes?)\b", "list_zombies")
 ]
 
+# Sensitive operations that must be intercepted before mutating system state
 DESTRUCTIVE_PATTERNS = [
     (r"\b(kill|terminate|stop|drain)\b.*pid\s*(\d+)", "kill_pid"),
     (r"\b(kill|terminate|stop|drain)\b.*port\s*(\d+)", "drain_port"),
@@ -88,14 +94,14 @@ DESTRUCTIVE_PATTERNS = [
 
 def classify_intent_deterministic(query: str) -> RoutingDecision:
     """
-    Deterministic Sub-10ms Intent Classifier (Sai simple-action pattern).
-    Classifies standard developer utterances without invoking Bedrock LLM.
+    Sub-10ms Regex & Heuristic Classifier.
+    Eliminates cold-start LLM latency for standard developer commands.
     """
-    q_lower = query.lower()
+    q_norm = query.lower().strip()
 
-    # Check destructive mutations first
+    # Step 1: Intercept destructive operations
     for pattern, intent in DESTRUCTIVE_PATTERNS:
-        match = re.search(pattern, q_lower)
+        match = re.search(pattern, q_norm)
         if match:
             target_num = int(match.group(2)) if match.lastindex and match.lastindex >= 2 else None
             pid = target_num if "pid" in intent else None
@@ -107,15 +113,14 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
                 requires_2pc_confirm=True,
                 target_pid=pid,
                 target_port=port,
-                execution_plan=f"Request 2PC developer confirmation to execute {intent}.",
+                execution_plan=f"Pause for explicit 2PC developer confirmation to execute {intent}.",
                 raw_query=query
             )
 
-    # Check fast-path queries
+    # Step 2: Intercept rapid status checks
     for pattern, intent in FAST_PATH_PATTERNS:
-        if re.search(pattern, q_lower):
-            # Extract port if specified
-            port_match = re.search(r"port\s*(\d+)", q_lower)
+        if re.search(pattern, q_norm):
+            port_match = re.search(r"port\s*(\d+)", q_norm)
             port = int(port_match.group(1)) if port_match else None
             return RoutingDecision(
                 route="fast_path",
@@ -123,32 +128,32 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
                 confidence=0.95,
                 requires_2pc_confirm=False,
                 target_port=port,
-                execution_plan="Execute local Python socket sentry directly without Bedrock LLM overhead.",
+                execution_plan="Execute direct procfs socket sensor without Bedrock API overhead.",
                 raw_query=query
             )
 
-    # Default: Deep agentic audit loop
+    # Step 3: Complex multi-step queries route to the multi-agent Bedrock loop
     return RoutingDecision(
         route="agentic_audit",
         intent_category="deep_code_investigation",
         confidence=0.88,
         requires_2pc_confirm=False,
-        execution_plan="Engage multi-agent AegisAgent/EcoLafaek Bedrock reasoning orchestrator.",
+        execution_plan="Engage multi-agent Bedrock reasoning loop for deep repository inspection.",
         raw_query=query
     )
 
 
 def execute_fast_path(decision: RoutingDecision) -> FastPathResult:
     """
-    Executes fast-path diagnostic tools directly.
-    Guarantees sub-250ms total execution time.
+    Directly queries local sockets in Python.
+    Executes in under 10ms, keeping voice interactions snappy and responsive.
     """
-    start_t = time.time()
+    t0 = time.time()
     target_ports = [decision.target_port] if decision.target_port else None
     report = audit_local_sockets(target_ports=target_ports)
-    elapsed_ms = round((time.time() - start_t) * 1000, 2)
+    elapsed_ms = round((time.time() - t0) * 1000.0, 2)
 
-    # Synthesize crisp Alexa speech output
+    # Format natural Alexa speech text
     if report.zombies_detected > 0:
         speech = f"Alert: Found {report.zombies_detected} zombie process holding inspected ports."
     elif report.active_listeners > 0:
@@ -167,17 +172,16 @@ def execute_fast_path(decision: RoutingDecision) -> FastPathResult:
 
 def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str, Any]:
     """
-    Master Ingress Dispatcher.
-    Routes developer query to FastPath or stages Agentic / Destructive workflows.
+    Main dispatching gateway for Alexa voice utterances and web simulator inputs.
     """
     decision = classify_intent_deterministic(query)
 
     if decision.route == "fast_path":
-        res = execute_fast_path(decision)
+        fast_res = execute_fast_path(decision)
         return {
             "route": "fast_path",
             "decision": decision.model_dump(),
-            "result": res.model_dump()
+            "result": fast_res.model_dump()
         }
 
     elif decision.route == "destructive_action":
@@ -191,16 +195,21 @@ def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str
             }
         else:
             term_res = terminate_zombie_process(decision.target_pid, confirm=True)
+            msg = (
+                f"Terminated PID {decision.target_pid} successfully."
+                if term_res.get("success") else
+                f"Failed to terminate PID {decision.target_pid}: {term_res.get('message', 'unknown error')}"
+            )
             return {
                 "route": "destructive_action",
                 "status": "EXECUTED",
-                "speech_text": f"Terminated PID {decision.target_pid} successfully." if term_res.get("success") else f"Failed to terminate PID {decision.target_pid}.",
+                "speech_text": msg,
                 "decision": decision.model_dump(),
                 "result": term_res
             }
 
     else:
-        # Agentic Audit Workflow
+        # Multi-agent audit loop
         return {
             "route": "agentic_audit",
             "status": "AGENTIC_LOOP_ENGAGED",

@@ -1,10 +1,11 @@
 # //PRANJAL DAS
 """
-Sentinel+ Alexa Conversations Declarative API Engine (src/alexa_conversations.py)
-Implements:
-1. Art Museum / pet-match Dialog.API.Invoked Protocol
-2. Autonomous Context Carry-Over across server clusters
-3. Decoupled Declarative Execution returning { apiResponse }
+Alexa Conversations Declarative API Engine (src/alexa_conversations.py)
+
+Handles multi-turn conversational interactions via the Dialog.API.Invoked protocol:
+- Maintains ephemeral in-memory session contexts across sequential dialog turns.
+- Carries over active cluster, target ports, and detected PIDs across conversational steps.
+- Decouples NLU entity slot filling from direct system socket inspection calls.
 """
 from typing import Dict, Any, Optional
 from src.socket_sentry import audit_local_sockets, terminate_zombie_process
@@ -17,7 +18,7 @@ class AlexaConversationsSessionContext:
         self.last_detected_pid: Optional[int] = None
 
     def update_with_carry_over(self, args: Dict[str, Any]) -> None:
-        """Preserves context when user modifies only one attribute."""
+        """Carries over conversational slots if a subsequent turn leaves them unspecified."""
         if "cluster" in args and args["cluster"]:
             self.active_cluster = args["cluster"]
         if "action" in args and args["action"]:

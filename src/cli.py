@@ -1,9 +1,13 @@
-# //PRANJAL DAS
 #!/usr/bin/env python3
+# //PRANJAL DAS
 """
-Sentinel+ Standalone CLI Audit Tool (src/cli.py)
-Implements the AmazonAppDev audit.js convention:
-Zero-dependency, high-speed CLI tool for auditing infrastructure, sockets, and agent skills.
+Sentinel+ Command-Line Diagnostic & Remediation Interface (src/cli.py)
+
+Provides direct CLI access to:
+- Deterministic socket inspections across local dev and container ports.
+- Multi-agent triage pipeline execution with unified diff staging.
+- Safe two-phase commit (2PC) termination of orphaned processes.
+- Developer platform friction logs formatted as structured JSON.
 """
 import sys
 import json

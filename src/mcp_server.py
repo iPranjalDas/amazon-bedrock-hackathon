@@ -1,13 +1,12 @@
 # //PRANJAL DAS
 """
-Sentinel+ Streamable HTTP MCP Server (src/mcp_server.py)
-Official Model Context Protocol (MCP) Server for Alexa+:
-- Streamable HTTP over Server-Sent Events (SSE)
-- JSON-RPC 2.0 Tool Protocol (`tools/list` and `tools/call`)
-- Sai Dual-Path Router Integration
-- AegisAgent Multi-Agent Triad Coordination
-- Zero-Trust OAuth2 Account Linking Guard
-- Web Simulator Static Asset Mount
+Streamable HTTP Model Context Protocol (MCP) Server (src/mcp_server.py)
+
+Exposes infrastructure diagnostics and automated remediation via the Model Context Protocol:
+- Streamable HTTP transport over Server-Sent Events (SSE) for real-time telemetry streaming.
+- Standard JSON-RPC 2.0 tool endpoints (`tools/list`, `tools/call`).
+- Fast-path deterministic router integration for sub-50ms conversational diagnostics.
+- Zero-trust RBAC gatekeeper verifying Bearer tokens and limiting destructive actions.
 """
 import os
 import sys

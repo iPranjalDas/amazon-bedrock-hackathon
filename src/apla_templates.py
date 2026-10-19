@@ -1,18 +1,19 @@
 # //PRANJAL DAS
 """
-Sentinel+ APLA Audio & AudioPlayer Templates (src/apla_templates.py)
-Implements:
-1. Voice Blast APLA Multi-Track Audio Mixing & Programmatic Volume Ducking
-2. Alexa AudioPlayer Stream Directives for Continuous Surveillance Feeds
-3. Sub-Second Timestamp Reaction Benchmark Calculation
+APLA Telemetry Audio Directives & Response Windows (src/apla_templates.py)
+
+Generates Alexa Presentation Language for Audio (APLA) documents:
+- Multi-track audio mixing with ambient telemetry beds and programmatic ducking.
+- AudioPlayer stream directives for continuous monitoring sessions.
+- Deterministic reaction window calculations to neutralize playback jitter.
 """
 import time
 from typing import Dict, Any
 
 def build_apla_telemetry_document(speech_text: str, severity: str = "NORMAL") -> Dict[str, Any]:
     """
-    Constructs an official Amazon Presentation Language for Audio (APLA) document.
-    Declaratively mixes ambient background telemetry beds with spoken diagnostic alerts.
+    Constructs an APLA document combining an ambient telemetry bed with spoken diagnostics.
+    Ducks ambient hum down to 10% during critical alerts to ensure vocal intelligibility.
     """
     is_critical = severity.upper() in ["CRITICAL", "HIGH", "ALERT"]
     ambient_volume = "10%" if is_critical else "20%"
@@ -101,8 +102,8 @@ def build_audio_player_directive(stream_url: str,
 
 def calculate_reaction_timestamp_window(audio_duration_sec: float, start_timestamp: float) -> Dict[str, float]:
     """
-    Voice Blast Pattern: Pre-computes the exact mathematical reaction window
-    to eliminate TTS latency and network jitter.
+    Computes an exact millisecond reaction window based on audio duration,
+    compensating for playback latency and network jitter.
     """
     finish_t = start_timestamp + audio_duration_sec
     bonus_window_end = finish_t + 3.0  # 3-second rapid response threshold

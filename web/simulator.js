@@ -1,5 +1,12 @@
 // //PRANJAL DAS
-// Sentinel+ Alexa+ Web Simulator Controller (web/simulator.js)
+/**
+ * Sentinel+ Web Simulator Controller (web/simulator.js)
+ * 
+ * Drives the interactive voice/SSE diagnostics console:
+ * - Real-time canvas audio waveform reflecting APLA voice and ducking states.
+ * - Sub-50ms dispatch to the local FastAPI MCP server.
+ * - Live Server-Sent Events (SSE) telemetry feed updating port/zombie counts.
+ */
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("voiceQueryInput");
     const speakBtn = document.getElementById("speakBtn");
@@ -20,9 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let isSpeaking = false;
     let wavePhase = 0;
 
-    // ==========================================
-    // 1. Reactive Waveform Animation (Loop It!)
-    // ==========================================
+    // Canvas audio visualizer animation loop
     function drawWaveform() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 2;
@@ -48,9 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     drawWaveform();
 
-    // ==========================================
-    // 2. Transmit Developer Query to MCP Router
-    // ==========================================
+    // Dispatch developer voice query to backend MCP router
     async function transmitQuery(query, confirm = false) {
         if (!query || query.trim() === "") return;
 
@@ -105,9 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ==========================================
-    // 3. Simulated Agentic Audit Trace Demo
-    // ==========================================
+    // Trigger multi-agent pipeline trace via JSON-RPC
     async function triggerAgenticAuditDemo() {
         try {
             const resp = await fetch("/mcp/call", {
@@ -150,9 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
         traceFeed.prepend(entry);
     }
 
-    // ==========================================
-    // 4. SSE Real-Time Telemetry Stream
-    // ==========================================
+    // Server-Sent Events (SSE) telemetry subscription
     function connectSSE() {
         const evtSource = new EventSource("/sse");
 
@@ -177,9 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     connectSSE();
 
-    // ==========================================
-    // 5. Event Listeners & Preset Chips
-    // ==========================================
+    // Input handlers and suggestion chip bindings
     speakBtn.addEventListener("click", () => {
         transmitQuery(input.value);
     });

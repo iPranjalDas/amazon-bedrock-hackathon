@@ -1,11 +1,13 @@
 # //PRANJAL DAS
 """
-Sentinel+ Multi-Agent Reasoning & Adjudication Hierarchy (src/agent_hierarchy.py)
-Implements:
-1. AegisAgent Tri-Agent Debate Hierarchy (Inspector -> Auditor Critic -> Remediation Engineer)
-2. GodlyDonuts/sai UI/Action Critic Guardrail (CriticVerdict)
-3. EcoLafaek Closed-Loop Sandbox Execution & GitHub PR Generation
-4. Amazon AppDev Developer Friction Log Event Capture (+10% Hackathon Bonus)
+Multi-Agent Triage & Adjudication Pipeline (src/agent_hierarchy.py)
+
+Coordinates a 3-tier audit workflow before code or socket mutations are proposed:
+1. Inspector: Gathers active socket state from procfs and checks AST syntax.
+2. Auditor Critic: Computes an empirical risk profile and blocks unverified destructive actions.
+3. Remediation Engineer: Prepares minimal unified diffs and PR envelopes for human review.
+
+Also packages developer feedback entries (FrictionLogEntry) for Amazon developer platform teams.
 """
 import os
 import sys
@@ -143,8 +145,10 @@ else:
 
 class SentinelOrchestrator:
     """
-    Coordinates the AegisAgent Triad:
-    Inspector Agent -> Auditor Critic -> Remediation Engineer
+    Coordinates the 3-stage audit pipeline:
+    1. Inspector Agent: Collects ground-truth runtime and AST telemetry.
+    2. Auditor Critic: Validates safety policies and checks blast radius.
+    3. Remediation Engineer: Packages unified diff patches without auto-applying.
     """
 
     def __init__(self, repo_path: str = "/mnt/d/amazon-bedrock-hackathon"):
@@ -154,9 +158,9 @@ class SentinelOrchestrator:
         session_id = f"sentinel-{uuid.uuid4().hex[:8]}"
         traces: List[AgentTraceStep] = []
 
-        # ==========================================
-        # AGENT 1: Inspector Agent (Evidence Curation)
-        # ==========================================
+        # ---------------------------------------------------------
+        # Step 1: Inspector Agent (Collect ground truth evidence)
+        # ---------------------------------------------------------
         sentry_report = audit_local_sockets()
         ast_findings = self._inspect_ast_codebase()
 
@@ -178,9 +182,9 @@ class SentinelOrchestrator:
             confidence=0.98
         ))
 
-        # ==========================================
-        # AGENT 2: Auditor Critic Agent (Adjudication & Policy Guard)
-        # ==========================================
+        # ---------------------------------------------------------
+        # Step 2: Auditor Critic (Safety and risk evaluation)
+        # ---------------------------------------------------------
         risk_score = 0.15 if sentry_report.zombies_detected == 0 else 0.85
         approved = sentry_report.zombies_detected == 0
         critic_verdict_str = "APPROVED" if approved else "ACTION_REQUIRED"
@@ -207,9 +211,9 @@ class SentinelOrchestrator:
             confidence=0.96
         ))
 
-        # ==========================================
-        # AGENT 3: Remediation Engineer (EcoLafaek Pattern)
-        # ==========================================
+        # ---------------------------------------------------------
+        # Step 3: Remediation Engineer (Unified diff generation)
+        # ---------------------------------------------------------
         patch = RemediationPatch(
             patch_id=f"patch-{session_id}",
             target_file="src/server_shutdown.py",
@@ -243,9 +247,9 @@ class SentinelOrchestrator:
             confidence=1.00
         ))
 
-        # ==========================================
-        # Amazon AppDev Developer Friction Log RFC
-        # ==========================================
+        # ---------------------------------------------------------
+        # Platform Friction Log (Feedback for Amazon SDK teams)
+        # ---------------------------------------------------------
         friction = FrictionLogEntry(
             task="Building self-hosted Alexa+ Streamable HTTP MCP server on Linux/WSL2",
             steps_taken=[

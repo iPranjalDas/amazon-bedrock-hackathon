@@ -1,10 +1,11 @@
 # //PRANJAL DAS
 """
-Sentinel+ Zero-Trust Security Gate (src/security_gate.py)
-Implements:
-1. Mommy-gram / Account Linking OAuth2 Bearer Gate (CheckAccountLinkedHandler)
-2. Identity & Role Hydration (GetLinkedInfoInterceptor)
-3. Role-Based Access Control (RBAC) protecting infrastructure mutations
+Zero-Trust RBAC & Account Linking Gatekeeper (src/security_gate.py)
+
+Enforces role-based authorization for all inbound MCP operations:
+- Hydrates caller identity and IAM scope from Bearer tokens.
+- Restricts mutating actions (SIGTERM, process kills, diff application) to ADMIN/OPERATOR roles.
+- Isolates cluster execution scopes (dev, staging, production) to prevent accidental cross-tenant disruption.
 """
 import time
 from typing import Dict, Any, Optional, List
@@ -30,7 +31,7 @@ class SecurityContext:
         }
 
 
-# Default simulated token registry for local dev and web simulator
+# Simulated token registry for local dev verification and web simulator testing
 DEV_TOKEN_REGISTRY = {
     "sentinel-admin-token-2026": SecurityContext(
         developer_id="dev-usr-001",
@@ -53,14 +54,14 @@ DEV_TOKEN_REGISTRY = {
 
 class SecurityGatekeeper:
     """
-    Enforces the Amazon Alexa Account Linking standard on all MCP tool calls.
+    Enforces authorization rules and token hydration across all MCP tool endpoints.
     """
 
     @staticmethod
     def verify_and_hydrate(bearer_token: Optional[str]) -> SecurityContext:
         """
-        Equivalent to Alexa's GetLinkedInfoInterceptor.
-        Validates token and extracts security claims.
+        Extracts claims from the incoming bearer token.
+        Falls back to anonymous context if unauthenticated.
         """
         if not bearer_token:
             return SecurityContext(
