@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# //PRANJAL DAS
+# //Pranjal Das
 """
 Sentinel+ Command-Line Diagnostic & Remediation Interface (src/cli.py)
 

@@ -1,4 +1,4 @@
-# //PRANJAL DAS
+# //Pranjal Das
 """
 Streamable HTTP Model Context Protocol (MCP) Server (src/mcp_server.py)
 

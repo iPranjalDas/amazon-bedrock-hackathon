@@ -1,7 +1,7 @@
-# //PRANJAL DAS
+# //Pranjal Das
 """
 Sentinel+ Ingress Router (src/router.py)
-Author: Pranjal Das //PRANJAL DAS
+Author: Pranjal Das //Pranjal Das
 
 Engineered for: Build, Ship, Shape: Amazon Developer Hackathon (2026)
 Design pattern: Dual-Path Ingress Router.

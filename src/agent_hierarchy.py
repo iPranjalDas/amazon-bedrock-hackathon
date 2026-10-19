@@ -1,4 +1,4 @@
-# //PRANJAL DAS
+# //Pranjal Das
 """
 Multi-Agent Triage & Adjudication Pipeline (src/agent_hierarchy.py)
 

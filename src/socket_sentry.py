@@ -1,7 +1,7 @@
-# //PRANJAL DAS
+# //Pranjal Das
 """
 Sentinel+ Core System Sentry (src/socket_sentry.py)
-Author: Pranjal Das //PRANJAL DAS
+Author: Pranjal Das //Pranjal Das
 
 Engineered for: Build, Ship, Shape: Amazon Developer Hackathon (2026)
 Core philosophy: "Hard Math First, LLM Second."

@@ -1,4 +1,4 @@
-// //PRANJAL DAS
+// //Pranjal Das
 /**
  * Sentinel+ Web Simulator Controller (web/simulator.js)
  * 

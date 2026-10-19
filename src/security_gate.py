@@ -1,4 +1,4 @@
-# //PRANJAL DAS
+# //Pranjal Das
 """
 Zero-Trust RBAC & Account Linking Gatekeeper (src/security_gate.py)
 

@@ -1,4 +1,4 @@
-# //PRANJAL DAS
+# //Pranjal Das
 """
 APLA Telemetry Audio Directives & Response Windows (src/apla_templates.py)
 
