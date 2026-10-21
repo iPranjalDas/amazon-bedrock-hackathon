@@ -79,6 +79,10 @@ else:
 
 # High-frequency developer status phrases matched via regex for instant response
 FAST_PATH_PATTERNS = [
+    (r"\b(ebpf|tcp state|socket fsm|cgroups?)\b", "ebpf_trace"),
+    (r"\b(anomal|leak|predict|z-?score|exhaustion)\b", "anomaly_prediction"),
+    (r"\b(fleet|cluster|staging|production|k8s|kubernetes|ecs)\b", "cluster_fleet"),
+    (r"\b(bedrock|mesh|nova|claude.*fallback|resilience)\b", "bedrock_mesh"),
     (r"\b(check|status|health|ping|listeners?|open ports?|is.*free|is.*running)\b", "port_status"),
     (r"\b(who.*listening|what.*running|system sentry info)\b", "system_info"),
     (r"\b(list zombies?|find zombies?|show processes?)\b", "list_zombies")
@@ -145,29 +149,95 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
 
 def execute_fast_path(decision: RoutingDecision) -> FastPathResult:
     """
-    Directly queries local sockets in Python.
+    Directly queries local sockets, eBPF state, anomalies, or cluster topology in Python.
     Executes in under 10ms, keeping voice interactions snappy and responsive.
     """
     t0 = time.time()
+    intent = decision.intent_category
     target_ports = [decision.target_port] if decision.target_port else None
-    report = audit_local_sockets(target_ports=target_ports)
-    elapsed_ms = round((time.time() - t0) * 1000.0, 2)
 
-    # Format natural Alexa speech text
-    if report.zombies_detected > 0:
-        speech = f"Alert: Found {report.zombies_detected} zombie process holding inspected ports."
-    elif report.active_listeners > 0:
-        speech = f"Sentinel status: {report.active_listeners} listening services active. Zero zombies detected."
+    if intent == "ebpf_trace":
+        from src.ebpf_sentry import audit_ebpf_socket_lifecycle
+        rep = audit_ebpf_socket_lifecycle(target_ports=target_ports)
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=f"eBPF Kernel Audit: Scanned {rep.total_sockets_scanned} sockets across 11 TCP states. Verdict: {rep.health_verdict}",
+            data=rep.model_dump()
+        )
+
+    elif intent == "anomaly_prediction":
+        from src.anomaly_engine import evaluate_system_anomalies
+        anom_rep = evaluate_system_anomalies()
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=anom_rep.voice_summary,
+            data=anom_rep.model_dump()
+        )
+
+    elif intent == "cluster_fleet":
+        from src.cluster_manager import DistributedFleetManager
+        raw_q = decision.raw_query.lower()
+        if "staging" in raw_q:
+            topo = DistributedFleetManager.get_cluster_topology("staging-ecs")
+            speech = f"Staging ECS cluster topology: {len(topo.nodes)} tasks active. Socket saturation at {topo.socket_saturation_pct}%."
+            data = topo.model_dump()
+        elif "prod" in raw_q or "k8s" in raw_q:
+            topo = DistributedFleetManager.get_cluster_topology("production-k8s")
+            speech = f"Production Kubernetes cluster: {len(topo.nodes)} worker nodes. Ingress saturation at {topo.socket_saturation_pct}%."
+            data = topo.model_dump()
+        else:
+            fleet = DistributedFleetManager.audit_entire_fleet()
+            speech = fleet.spoken_summary
+            data = fleet.model_dump()
+
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=speech,
+            data=data
+        )
+
+    elif intent == "bedrock_mesh":
+        from src.bedrock_mesh import BedrockResiliencyMesh
+        mesh = BedrockResiliencyMesh()
+        mesh_res = mesh.dispatch_inference(decision.raw_query)
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=f"Bedrock Mesh routed to {mesh_res.active_model_id} in {mesh_res.latency_ms} ms. Status: {mesh_res.status}.",
+            data=mesh_res.model_dump()
+        )
+
     else:
-        speech = "All monitored ports are clean and ready for binding."
+        # Default socket sentry
+        report = audit_local_sockets(target_ports=target_ports)
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
 
-    return FastPathResult(
-        success=True,
-        route="fast_path",
-        latency_ms=elapsed_ms,
-        speech_text=speech,
-        data=report.model_dump()
-    )
+        # Format natural Alexa speech text
+        if report.zombies_detected > 0:
+            speech = f"Alert: Found {report.zombies_detected} zombie process holding inspected ports."
+        elif report.active_listeners > 0:
+            speech = f"Sentinel status: {report.active_listeners} listening services active. Zero zombies detected."
+        else:
+            speech = "All monitored ports are clean and ready for binding."
+
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=speech,
+            data=report.model_dump()
+        )
 
 
 def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str, Any]:

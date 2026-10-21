@@ -109,6 +109,53 @@ MCP_TOOLS_MANIFEST = [
                 "severity": {"type": "string", "default": "NORMAL"}
             }
         }
+    },
+    {
+        "name": "sentinel_ebpf_socket_fsm",
+        "description": "Deep eBPF/procfs audit across all 11 TCP states and Linux cgroups v2 memory pressure.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target_ports": {
+                    "type": "array",
+                    "items": {"type": "integer"}
+                }
+            }
+        }
+    },
+    {
+        "name": "sentinel_predict_anomalies",
+        "description": "Computes EWMA and rolling Z-Score statistics to predict memory leaks and socket exhaustion before crashes.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target_pids": {
+                    "type": "array",
+                    "items": {"type": "integer"}
+                }
+            }
+        }
+    },
+    {
+        "name": "sentinel_bedrock_mesh_query",
+        "description": "Queries the resilient multi-model Bedrock mesh with automated rate limiting and circuit breaking.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["prompt"],
+            "properties": {
+                "prompt": {"type": "string"}
+            }
+        }
+    },
+    {
+        "name": "sentinel_cluster_fleet_audit",
+        "description": "Audits distributed cluster topology across dev-local, staging-ecs, and production-k8s.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "cluster_name": {"type": "string", "default": "all"}
+            }
+        }
     }
 ]
 
@@ -256,6 +303,52 @@ async def handle_mcp_jsonrpc(request: Request, authorization: Optional[str] = He
                 "jsonrpc": "2.0",
                 "id": jsonrpc_id,
                 "result": {"content": [{"type": "text", "text": json.dumps(apla_doc)}]}
+            }
+
+        elif tool_name == "sentinel_ebpf_socket_fsm":
+            from src.ebpf_sentry import audit_ebpf_socket_lifecycle
+            ports = arguments.get("target_ports")
+            ebpf_rep = audit_ebpf_socket_lifecycle(target_ports=ports)
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(ebpf_rep.model_dump())}]}
+            }
+
+        elif tool_name == "sentinel_predict_anomalies":
+            from src.anomaly_engine import evaluate_system_anomalies
+            pids = arguments.get("target_pids")
+            anom_rep = evaluate_system_anomalies(active_process_pids=pids)
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(anom_rep.model_dump())}]}
+            }
+
+        elif tool_name == "sentinel_bedrock_mesh_query":
+            from src.bedrock_mesh import BedrockResiliencyMesh
+            prompt_str = arguments.get("prompt", "audit infrastructure")
+            mesh = BedrockResiliencyMesh()
+            res = mesh.dispatch_inference(prompt_str)
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(res.model_dump())}]}
+            }
+
+        elif tool_name == "sentinel_cluster_fleet_audit":
+            from src.cluster_manager import DistributedFleetManager
+            cname = arguments.get("cluster_name", "all")
+            if cname == "all":
+                fleet_rep = DistributedFleetManager.audit_entire_fleet()
+                data = fleet_rep.model_dump()
+            else:
+                topo = DistributedFleetManager.get_cluster_topology(cname)
+                data = topo.model_dump()
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(data)}]}
             }
 
         else:

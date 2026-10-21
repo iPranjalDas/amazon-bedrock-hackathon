@@ -1,7 +1,7 @@
 # 🛡️ Sentinel+ : Autonomous Infrastructure & Code Sentry for Alexa+
 
 > **Submission for:** *Build, Ship, Shape: Amazon Developer Hackathon (2026)*  
-> **Test Status:** ![Tests: 18/18 Passing](https://img.shields.io/badge/Tests-18%2F18%20Passing-00e676?style=flat-square) ![Protocol: MCP over SSE](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(SSE)-00d2ff?style=flat-square) ![Version: v1.0.4](https://img.shields.io/badge/Release-v1.0.4-ff9900?style=flat-square) ![Storage: Drive D Exclusive](https://img.shields.io/badge/Storage-Drive%20D%20Exclusive-purple?style=flat-square)
+> **Test Status:** ![Tests: 27/27 Passing](https://img.shields.io/badge/Tests-27%2F27%20Passing-00e676?style=flat-square) ![Protocol: MCP over SSE](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(SSE)-00d2ff?style=flat-square) ![Version: v1.1.0](https://img.shields.io/badge/Release-v1.1.0%20Enterprise-ff9900?style=flat-square) ![Storage: Drive D Exclusive](https://img.shields.io/badge/Storage-Drive%20D%20Exclusive-purple?style=flat-square)
 
 ---
 
