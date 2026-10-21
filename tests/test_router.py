@@ -43,3 +43,16 @@ def test_destructive_gate_blocks_without_confirm():
     assert res["route"] == "destructive_action"
     assert res["status"] == "CONFIRMATION_REQUIRED"
     assert res["requires_2pc_confirm"] is True
+
+def test_conversational_bedrock_chat():
+    res = route_and_execute("hello, how are you?")
+    assert res["route"] == "conversational_bedrock"
+    assert res["status"] == "CONVERSATIONAL_REPLY"
+    assert "sentinel+" in res["speech_text"].lower() or "amazon" in res["speech_text"].lower()
+    assert res["latency_ms"] < 200.0
+
+def test_conversational_questions():
+    res = route_and_execute("who are you and what do you do?")
+    assert res["route"] == "conversational_bedrock"
+    assert len(res["speech_text"]) > 20
+    assert "nova" in res["model"].lower()

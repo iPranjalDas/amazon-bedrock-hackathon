@@ -59,14 +59,19 @@
                     </div>
                 </div>
 
-                <!-- Alexa Speech Output -->
+                <!-- Alexa Speech Output & Conversational Chat Feed -->
                 <div class="speech-output-card">
-                    <div class="speech-label">ALEXA+ SPOKEN RESPONSE:</div>
-                    <div class="speech-bubble" id="speechBubble">
-                        "Sentinel+ standing by. Listening for infrastructure queries or security incidents."
+                    <div class="chat-header-bar">
+                        <div class="speech-label">🎙️ ALEXA+ CONVERSATION TRANSCRIPT</div>
+                        <div class="latency-metrics" id="latencyMetrics">
+                            <span>LATENCY: <b>0.0 ms</b></span> | <span>ROUTE: <b>IDLE</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>
+                        </div>
                     </div>
-                    <div class="latency-metrics" id="latencyMetrics">
-                        <span>LATENCY: <b>0.0 ms</b></span> | <span>ROUTE: <b>IDLE</b></span> | <span>SECURITY: <b>VERIFIED</b></span>
+                    <div class="chat-history-container" id="chatHistory">
+                        <div class="chat-msg assistant-msg">
+                            <div class="msg-meta"><span class="agent-tag">Amazon Nova Pro</span> <span class="time-tag">Sentinel+ Online</span></div>
+                            <div class="msg-body" id="speechBubble">"Sentinel+ standing by. Listening for infrastructure queries, port diagnostics, or systems architecture questions."</div>
+                        </div>
                     </div>
                 </div>
             </section>

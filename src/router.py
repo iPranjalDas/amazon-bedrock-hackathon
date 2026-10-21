@@ -136,13 +136,24 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
                 raw_query=query
             )
 
-    # Step 3: Complex multi-step queries route to the multi-agent Bedrock loop
+    # Step 3: Check for deep repository multi-agent audit
+    if re.search(r"\b(audit.*repo|aegisagent|run.*audit|stage.*patch|multi-agent|triage.*repo)\b", q_norm):
+        return RoutingDecision(
+            route="agentic_audit",
+            intent_category="deep_code_investigation",
+            confidence=0.88,
+            requires_2pc_confirm=False,
+            execution_plan="Engage multi-agent Bedrock reasoning loop for deep repository inspection.",
+            raw_query=query
+        )
+
+    # Step 4: General conversational assistance routes to Amazon Nova Pro
     return RoutingDecision(
-        route="agentic_audit",
-        intent_category="deep_code_investigation",
-        confidence=0.88,
+        route="conversational_bedrock",
+        intent_category="conversational_assistance",
+        confidence=0.92,
         requires_2pc_confirm=False,
-        execution_plan="Engage multi-agent Bedrock reasoning loop for deep repository inspection.",
+        execution_plan="Engage Amazon Nova Pro conversational intelligence engine.",
         raw_query=query
     )
 
@@ -227,7 +238,7 @@ def execute_fast_path(decision: RoutingDecision) -> FastPathResult:
         if report.zombies_detected > 0:
             speech = f"Alert: Found {report.zombies_detected} zombie process holding inspected ports."
         elif report.active_listeners > 0:
-            speech = f"Sentinel status: {report.active_listeners} listening services active. Zero zombies detected."
+            speech = f"Sentinel status: {report.active_listeners} listening services active across monitored ports. Zero zombies detected."
         else:
             speech = "All monitored ports are clean and ready for binding."
 
@@ -277,6 +288,21 @@ def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str
                 "decision": decision.model_dump(),
                 "result": term_res
             }
+
+    elif decision.route == "conversational_bedrock":
+        from src.bedrock_mesh import BedrockResiliencyMesh
+        mesh = BedrockResiliencyMesh()
+        res = mesh.dispatch_conversational(query)
+        output_speech = res.payload_response.get("raw_output", "Understood. Infrastructure telemetry normal.")
+        return {
+            "route": "conversational_bedrock",
+            "status": "CONVERSATIONAL_REPLY",
+            "speech_text": output_speech,
+            "latency_ms": res.latency_ms,
+            "model": res.active_model_id,
+            "decision": decision.model_dump(),
+            "data": res.model_dump()
+        }
 
     else:
         # Multi-agent audit loop

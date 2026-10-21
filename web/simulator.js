@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("voiceQueryInput");
     const speakBtn = document.getElementById("speakBtn");
     const speechBubble = document.getElementById("speechBubble");
+    const chatHistory = document.getElementById("chatHistory");
     const latencyMetrics = document.getElementById("latencyMetrics");
     const duckingTag = document.getElementById("duckingTag");
     const canvas = document.getElementById("waveformCanvas");
@@ -26,6 +27,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let isSpeaking = false;
     let wavePhase = 0;
+
+    // Helper: append multi-turn chat messages
+    function appendChatMessage(text, modelTag, isUser = false) {
+        if (!chatHistory) return;
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `chat-msg ${isUser ? "user-msg" : "assistant-msg"}`;
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const cleanText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        msgDiv.innerHTML = `
+            <div class="msg-meta">
+                <span class="agent-tag">${modelTag}</span>
+                <span class="time-tag">${timeStr}</span>
+            </div>
+            <div class="msg-body">${isUser ? cleanText : `"${cleanText}"`}</div>
+        `;
+        chatHistory.appendChild(msgDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
 
     // Canvas audio visualizer animation loop
     function drawWaveform() {
@@ -57,12 +77,16 @@ document.addEventListener("DOMContentLoaded", () => {
     async function transmitQuery(query, confirm = false) {
         if (!query || query.trim() === "") return;
 
+        // Append user query into chat transcript
+        appendChatMessage(query, "Developer", true);
+        if (input) input.value = "";
+
         isSpeaking = true;
         duckingTag.textContent = "APLA DUCKING: 10% (VOICE TRANSMISSION ACTIVE)";
         duckingTag.style.color = "#ff9900";
 
         const startT = performance.now();
-        speechBubble.textContent = "Processing query via Sentinel+ router...";
+        if (speechBubble) speechBubble.textContent = "Processing query via Sentinel+ router...";
 
         try {
             const resp = await fetch("/alexa/converse", {
@@ -74,14 +98,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await resp.json();
             const elapsed = Math.round(performance.now() - startT);
 
-            // Update Speech Output
+            // Update Speech Output & Chat Log
             if (data.route === "fast_path") {
-                speechBubble.textContent = `"${data.result.speech_text}"`;
+                appendChatMessage(data.result.speech_text, "⚡ Fast Path (Procfs)");
+                if (speechBubble) speechBubble.textContent = `"${data.result.speech_text}"`;
                 latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.result.latency_ms} ms</b></span> | <span>ROUTE: <b>FAST PATH</b></span> | <span>CONFIDENCE: <b>${Math.round(data.decision.confidence * 100)}%</b></span>`;
                 appendTrace("FAST_ROUTER", "Deterministic Sub-10ms Routing", data.result.speech_text, "inspector");
             } 
+            else if (data.route === "conversational_bedrock") {
+                appendChatMessage(data.speech_text, data.model || "Amazon Nova Pro");
+                if (speechBubble) speechBubble.textContent = `"${data.speech_text}"`;
+                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.latency_ms} ms</b></span> | <span>ROUTE: <b>BEDROCK CONVERSATION</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>`;
+                appendTrace("BEDROCK_CONVERSE", "Amazon Nova Pro Dialogue", data.speech_text.substring(0, 100) + "...", "inspector");
+            }
             else if (data.route === "destructive_action") {
-                speechBubble.textContent = `"${data.speech_text}"`;
+                appendChatMessage(data.speech_text, "🛡️ 2PC Safety Gate");
+                if (speechBubble) speechBubble.textContent = `"${data.speech_text}"`;
                 latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>2PC GATE</b></span> | <span>STATUS: <b>${data.status}</b></span>`;
                 
                 if (data.requires_2pc_confirm) {
@@ -92,12 +124,14 @@ document.addEventListener("DOMContentLoaded", () => {
             } 
             else {
                 // Agentic Loop
-                speechBubble.textContent = `"${data.speech_text}"`;
+                appendChatMessage(data.speech_text, "🧠 AegisAgent Multi-Agent Loop");
+                if (speechBubble) speechBubble.textContent = `"${data.speech_text}"`;
                 latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>AGENTIC BEDROCK LOOP</b></span> | <span>TRACE: <b>ACTIVE</b></span>`;
                 triggerAgenticAuditDemo();
             }
         } catch (err) {
-            speechBubble.textContent = `"Error communicating with Sentinel+ MCP server: ${err.message}"`;
+            appendChatMessage(`Error communicating with Sentinel+ MCP server: ${err.message}`, "System Error");
+            if (speechBubble) speechBubble.textContent = `"Error communicating with Sentinel+ MCP server: ${err.message}"`;
             latencyMetrics.innerHTML = `<span>ERROR</span>`;
         } finally {
             setTimeout(() => {

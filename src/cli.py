@@ -30,6 +30,7 @@ def main():
         epilog="Examples:\n  python3 -m src.cli --check\n  python3 -m src.cli --audit-repo\n  python3 -m src.cli --kill-pid 8492 --confirm"
     )
     parser.add_argument("--check", action="store_true", help="Perform instant deterministic socket audit")
+    parser.add_argument("--chat", action="store_true", help="Launch interactive conversational chat with Sentinel+ (Amazon Bedrock)")
     parser.add_argument("--ports", type=str, default="3000,5173,8000,8080", help="Comma-separated target ports")
     parser.add_argument("--audit-repo", action="store_true", help="Run full AegisAgent/Sai multi-agent audit")
     parser.add_argument("--kill-pid", type=int, help="Target PID to terminate")
@@ -38,6 +39,38 @@ def main():
     parser.add_argument("--friction-log", action="store_true", help="Print official Amazon Developer Friction Log RFC")
 
     args = parser.parse_args()
+
+    # Case 0: Interactive Terminal Chat REPL
+    if args.chat:
+        from src.router import route_and_execute
+        print("=================================================================")
+        print("  🎙️  Sentinel+ Interactive Alexa & Bedrock Console (CLI Chat)")
+        print("  Author: Pranjal Das //Pranjal Das")
+        print("  Engine: Amazon Nova Pro & Model Context Protocol")
+        print("  Type 'exit', 'quit', or 'q' to end session.")
+        print("=================================================================\n")
+        
+        while True:
+            try:
+                user_msg = input("\033[1;36mYou > \033[0m").strip()
+                if not user_msg:
+                    continue
+                if user_msg.lower() in ["exit", "quit", "q"]:
+                    print("\n[Sentinel+] Session ended. Sentry standing by.")
+                    break
+
+                res = route_and_execute(user_msg)
+                route = res.get("route", "unknown")
+                speech = res.get("speech_text") or res.get("result", {}).get("speech_text", "")
+                latency = res.get("latency_ms") or res.get("result", {}).get("latency_ms", 0.0)
+                model = res.get("model", "Amazon Nova Pro")
+
+                print(f"\033[1;33mSentinel+ [{model} | {latency}ms | {route.upper()}]\033[0m")
+                print(f"{speech}\n")
+            except (KeyboardInterrupt, EOFError):
+                print("\n[Sentinel+] Terminating interactive console. Goodbye.")
+                break
+        sys.exit(0)
 
     # Case 1: Kill PID with 2PC
     if args.kill_pid:
