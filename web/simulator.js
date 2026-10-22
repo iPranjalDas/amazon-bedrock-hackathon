@@ -69,10 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const amp = isSpeaking ? (26 - w * 6) : (6 - w * 2);
             const currentPhase = wavePhase * (1 + w * 0.35);
 
-            // Luxury Palette: Electric Sky & Linear Indigo (idle) -> Champagne Gold & Amber (speaking)
+            // Luxury Light Palette: Royal Indigo & Sky Azure (idle) -> Imperial Champagne Gold & Amber (speaking)
             const strokeColor = isSpeaking
-                ? (w === 0 ? "rgba(251, 191, 36, 0.95)" : (w === 1 ? "rgba(245, 158, 11, 0.55)" : "rgba(217, 119, 6, 0.3)"))
-                : (w === 0 ? "rgba(56, 189, 248, 0.9)" : "rgba(99, 102, 241, 0.4)");
+                ? (w === 0 ? "rgba(180, 83, 9, 0.95)" : (w === 1 ? "rgba(217, 119, 6, 0.65)" : "rgba(245, 158, 11, 0.35)"))
+                : (w === 0 ? "rgba(67, 56, 202, 0.9)" : "rgba(2, 132, 199, 0.45)");
 
             ctx.lineWidth = w === 0 ? 2.5 : 1.2;
             ctx.strokeStyle = strokeColor;
