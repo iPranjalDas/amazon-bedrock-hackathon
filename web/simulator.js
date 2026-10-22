@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         inFlightTimer = setInterval(() => {
             const elapsed = Math.round(performance.now() - t0);
             if (latencyMetrics) {
-                latencyMetrics.innerHTML = `<span>IN-FLIGHT: <b style="color:#ff9900;">${elapsed} ms</b></span> | <span>ROUTE: <b>ROUTING...</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>`;
+                latencyMetrics.innerHTML = `<span>IN-FLIGHT: <b style="color:var(--accent-gold);">${elapsed} ms</b></span> | <span>ROUTE: <b>ROUTING...</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>`;
             }
         }, 20);
         return () => {
@@ -173,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         isSpeaking = true;
         duckingTag.textContent = "APLA DUCKING: 10% (SPEECH ACTIVE)";
-        duckingTag.style.color = "#ff9900";
+        duckingTag.style.color = "var(--accent-gold)";
 
         const stopInFlightTimer = startInFlightTimer();
         if (liveSpeechStream) liveSpeechStream.textContent = "Routing query via Sentinel+ deterministic router...";
@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.decision.intent_category === "verify_diagram" && data.result.data) {
                     const rep = data.result.data;
                     visionBadge.textContent = rep.status;
-                    visionBadge.style.color = rep.status === "VERIFIED_COMPLIANT" ? "#00e676" : "#ff9900";
+                    visionBadge.style.color = rep.status === "VERIFIED_COMPLIANT" ? "var(--accent-emerald)" : "var(--accent-gold)";
                     visionCardBody.innerHTML = `<b>Status:</b> ${rep.status} | <b>Drift Score:</b> ${rep.drift_score}<br><b>Declared:</b> ${rep.declared_services_count} services | <b>Active:</b> ${rep.live_listeners_count} sockets.<br>${rep.summary_verdict}`;
                 }
 
@@ -258,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 isSpeaking = false;
                 duckingTag.textContent = "APLA DUCKING: 25% AMBIENT HUM";
-                duckingTag.style.color = "#ff9900";
+                duckingTag.style.color = "var(--accent-gold)";
             }, 2500);
         }
     }
@@ -456,7 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (metricScanned) metricScanned.textContent = telemetry.total_scanned || 8;
                 if (metricRisk) {
                     metricRisk.textContent = telemetry.zombies_detected > 0 ? "CRITICAL" : "LOW";
-                    metricRisk.style.color = telemetry.zombies_detected > 0 ? "#ff3366" : "#00e676";
+                    metricRisk.style.color = telemetry.zombies_detected > 0 ? "var(--accent-rose)" : "var(--accent-emerald)";
                 }
                 if (telemetry.findings) {
                     updatePortsTable(telemetry.findings);
@@ -469,8 +469,8 @@ document.addEventListener("DOMContentLoaded", () => {
         evtSource.onerror = () => {
             if (streamStatus) {
                 streamStatus.innerHTML = `
-                    <span class="status-dot" style="background:#ff3366; box-shadow:0 0 8px #ff3366;"></span>
-                    <span class="status-text" style="color:#ff3366;">OFFLINE (RECONNECTING...)</span>
+                    <span class="status-dot" style="background:var(--accent-rose); box-shadow:0 0 8px var(--accent-rose-glow);"></span>
+                    <span class="status-text" style="color:var(--accent-rose);">OFFLINE (RECONNECTING...)</span>
                 `;
             }
         };

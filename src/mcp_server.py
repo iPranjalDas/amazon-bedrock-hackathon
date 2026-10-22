@@ -22,7 +22,7 @@ _PACKAGES = _REPO_ROOT / "packages"
 if _PACKAGES.exists() and str(_PACKAGES) not in sys.path:
     sys.path.insert(0, str(_PACKAGES))
 
-from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi import FastAPI, Request, Header, HTTPException, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -336,7 +336,7 @@ async def handle_mcp_jsonrpc(request: Request, authorization: Optional[str] = He
         elif tool_name == "sentinel_remediate_socket":
             pid = arguments.get("pid")
             confirm = arguments.get("confirmed", False)
-            res = terminate_zombie_process(pid=pid, confirm=confirm)
+            res = await asyncio.to_thread(terminate_zombie_process, pid=pid, confirm=confirm)
             return {
                 "jsonrpc": "2.0",
                 "id": jsonrpc_id,

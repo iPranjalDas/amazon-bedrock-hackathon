@@ -71,7 +71,7 @@ def handle_dialog_api_invoked(request_envelope: Dict[str, Any]) -> Dict[str, Any
 
     elif api_name == "executeRemediation":
         pid_to_kill = arguments.get("pid", session_ctx.last_detected_pid)
-        confirm = arguments.get("confirmed", True)
+        confirm = arguments.get("confirmed", False)
 
         if not pid_to_kill:
             return {

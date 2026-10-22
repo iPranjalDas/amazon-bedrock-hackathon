@@ -1,11 +1,14 @@
 # 🛡️ Sentinel+ : Autonomous Infrastructure & Code Sentry for Alexa+
 
 > **Submission for:** *Build, Ship, Shape: Amazon Developer Hackathon (2026)*  
-> **Test Status:** ![Tests: 39/39 Passing](https://img.shields.io/badge/Tests-39%2F39%20Passing-00e676?style=flat-square) ![Protocol: MCP over SSE](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(SSE)-00d2ff?style=flat-square) ![Version: v1.2.0](https://img.shields.io/badge/Release-v1.2.0%20Enterprise-ff9900?style=flat-square) ![Storage: Drive D Exclusive](https://img.shields.io/badge/Storage-Drive%20D%20Exclusive-purple?style=flat-square)
+> **Test Status:** ![Tests: 39/39 Passing](https://img.shields.io/badge/Tests-39%2F39%20Passing-00e676?style=flat-square) ![Protocol: MCP over SSE](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(SSE)-00d2ff?style=flat-square) ![Version: v1.3.3](https://img.shields.io/badge/Release-v1.3.3%20Luxury%20Edition-b45309?style=flat-square) ![Storage: Drive D Exclusive](https://img.shields.io/badge/Storage-Drive%20D%20Exclusive-purple?style=flat-square)
 
 ---
 
 ## 🧭 Project Navigation
+- **Devpost Submission Manifest:** [`DEVPOST.md`](DEVPOST.md)
+- **Winning Demo Video Script (< 175s):** [`VIDEO_SCRIPT.md`](VIDEO_SCRIPT.md)
+- **Amazon Developer Friction Log & RFC (+10% Bonus):** [`docs/AMAZON_FEEDBACK_RFC.md`](docs/AMAZON_FEEDBACK_RFC.md)
 - **Architecture Blueprints:** [`LEARN.md`](LEARN.md)
 - **Forensic Intelligence Ledger:** [`DATA.md`](DATA.md)
 - **Hackathon Strategy & Scoring:** [`STRATEGY.md`](STRATEGY.md)
@@ -33,9 +36,10 @@ We fused their core architectural mechanics into a single enterprise-grade sentr
 
 ```mermaid
 flowchart TD
-    User(["👤 Developer Voice / Web Simulator"]) -->|"Natural Language Query"| Router["⚡ Dual-Path Router (Sai Pattern)\n(Fast Path vs Agentic Bedrock)"]
+    User(["👤 Developer Voice / Luxury Web Console"]) -->|"Natural Language Query / Diagram Upload"| Router["⚡ Dual-Path Router (Sai Pattern)\n(Fast Path vs Agentic Bedrock)"]
     
     Router -->|"Simple Status Query\n(< 10ms)"| FastExec["⚡ Instant Deterministic Procfs Sensor\n(Pure Python: Port Table, PID RSS)"]
+    Router -->|"Architecture Diagram Verification"| VisionEngine["👁️ Bedrock Nova Pro Vision Verifier\n(PNG / Mermaid Topology vs Live Procfs Sockets)"]
     Router -->|"Complex Sentry Task\n(Multi-Turn)"| Orchestrator["🧠 Sentinel+ Sentry Orchestrator\n(Bedrock ConverseStream API)"]
     
     subgraph MultiAgentLoop ["AegisAgent Multi-Agent Triad"]
@@ -49,36 +53,39 @@ flowchart TD
     Gate -->|Yes| Action["🚀 Closed-Loop Execution\n(Terminates zombie PID & opens GitHub PR)"]
     Gate -->|No| Abort["🛑 Rollback & Explain Trace"]
     
+    VisionEngine --> Dashboard["💻 Luxury Bento Console (Alabaster & Champagne Gold)\n(Hann-Window Waveform + Live SSE Telemetry Feed)"]
     Action --> Feedback["📝 Amazon Developer Friction Log RFC\n(Appends SDK findings for 'Shape' Track)"]
-    Feedback --> Dashboard["💻 Reactive Web Simulator Dashboard\n(Loop It! Waveform + Telemetry Cards)"]
+    Feedback --> Dashboard
 ```
 
 ---
 
 ## ⚡ What It Does
 1. **Instant Voice Diagnostics (< 10ms):** Developers ask *"Alexa, is port 3000 free?"* or *"Check sentry health"*. The Sai-inspired dual-path router bypasses LLM latency, querying system procfs deterministically in under 10 milliseconds.
-2. **Zombie Process Detection & 2PC Termination:** Detects orphaned child processes holding ports in `TIME_WAIT` after a dev server crashes. Enforces a strict Two-Phase Commit (2PC) security gate before executing terminations.
-3. **Multi-Agent Remediation & PR Staging:** When socket leaks or unclosed listeners are detected, the AegisAgent Triad drafts a surgical graceful SIGTERM shutdown patch, creates an atomic Git diff, and prepares a GitHub Pull Request.
-4. **Declarative Audio Ducking (APLA):** Mixes a continuous ambient 25% server drone that dynamically ducks to 10% during voice alert broadcasts.
-5. **Zero-Trust OAuth2 Role-Based Access Control (RBAC):** Protects production clusters: read-only diagnostics execute freely; mutating operations require verified DevOps Admin bearer tokens.
+2. **Bedrock Nova Pro Multimodal Architecture Verifier:** Uses Amazon Bedrock Nova Pro vision reasoning to cross-reference cloud architecture diagrams (PNG, JPEG, Mermaid) against live Linux procfs listening sockets, discovering unmanaged ports and architectural drift before deployment.
+3. **Zombie Process Detection & 2PC Termination:** Detects orphaned child processes holding ports in `TIME_WAIT` after a dev server crashes. Enforces a strict Two-Phase Commit (2PC) security gate before executing terminations.
+4. **Multi-Agent Remediation & PR Staging:** When socket leaks or unclosed listeners are detected, the AegisAgent Triad drafts a surgical graceful SIGTERM shutdown patch, creates an atomic Git diff, and prepares a GitHub Pull Request.
+5. **Declarative Audio Ducking (APLA):** Mixes a continuous ambient 25% server drone that dynamically ducks to 10% during voice alert broadcasts.
+6. **Zero-Trust OAuth2 Role-Based Access Control (RBAC):** Protects production clusters: read-only diagnostics execute freely; mutating operations require verified DevOps Admin bearer tokens.
 
 ---
 
 ## 📝 The Amazon Developer Friction Log (+10% Stage 1 Bonus)
 
-As required by the official hackathon scoring rubric for the "Shape" dimension, Sentinel+ logs structured feedback for Amazon engineering:
+As required by the official hackathon scoring rubric for the "Shape" dimension, Sentinel+ logs structured feedback for Amazon engineering. See the complete 6-column matrix and RFC specifications in **[`docs/AMAZON_FEEDBACK_RFC.md`](docs/AMAZON_FEEDBACK_RFC.md)**:
 
 | Task | Steps Taken | Expected Behavior | Actual Behavior | Severity | Workaround / Suggestion |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Self-Hosted MCP on Linux/WSL2** | 1. Initialize MCP server<br>2. Bind JSON-RPC tools<br>3. Connect SSE transport | Native starter kit for streamable HTTP Model Context Protocol in Alexa+ developer portal. | Documentation defaults to stdio transports; lack of open-source SSE reference servers. | **MEDIUM** | Built custom FastAPI SSE/JSON-RPC 2.0 bridge with sub-10ms router. Amazon should release an official Python SSE starter kit. |
-| **Audio Ducking Sidechains** | 1. Author APLA document<br>2. Mix ambient drone + TTS | Automatic sidechain compressor ducking ambient audio when Polly speaks. | APLA requires manual declarative volume filters (`amount: 10%`) on child Audio components. | **LOW** | Implemented declarative filter arrays in `src/apla_templates.py`. Suggested adding a native `duckOnSpeech: true` APLA flag. |
+| **Self-Hosted MCP on Linux/WSL2** | 1. Initialize MCP server<br>2. Bind JSON-RPC tools<br>3. Connect SSE transport | Native starter kit for streamable HTTP Model Context Protocol in Alexa+ developer portal. | Documentation defaults to stdio transports; lack of open-source SSE reference servers. | **MAJOR** | Built custom FastAPI SSE/JSON-RPC 2.0 bridge with sub-10ms router. Amazon should release an official `@alexa/mcp-server-fastapi` starter kit. |
+| **Audio Ducking Sidechains** | 1. Author APLA document<br>2. Mix ambient drone + TTS | Automatic sidechain compressor ducking ambient audio when Polly speaks. | APLA requires manual declarative volume filters (`amount: 10%`) on child Audio components. | **MINOR** | Implemented declarative filter arrays in `src/apla_templates.py`. Proposed a native `AutoDucking` APLA filter primitive in RFC-2. |
+| **Deeply Nested JSON Schemas** | Register tool schemas with `$defs` | Schema validates union types | Bedrock Converse throws `400 ValidationException` | **MODERATE** | Recursively flattened `$defs` into inline schemas via Pydantic v2 pre-serialization hook. |
 
 ---
 
 ## 🚀 Quick Start Guide
 
 ### 1. Requirements
-- Python 3.10+ (Tested on Python 3.11.16)
+- Python 3.10+ (Tested and verified on Python 3.11.16)
 - Linux / WSL2 / macOS
 - All packages pre-installed on Drive D (`/mnt/d/amazon-bedrock-hackathon/packages/`)
 
@@ -87,7 +94,7 @@ As required by the official hackathon scoring rubric for the "Shape" dimension, 
 # Execute the launcher script on Drive D
 ./run.sh
 ```
-Open **`http://localhost:8000`** in any browser to experience the interactive Alexa+ Web Simulator!
+Open **`http://localhost:8000`** in any browser to experience the luxury Alabaster & Champagne Gold Alexa+ Web Simulator!
 
 ### 3. Run the Automated Test Suite (39/39 Passing)
 ```bash
@@ -97,13 +104,13 @@ PYTHONPATH=packages:. python3.11 -m pytest tests/ -v
 ### 4. Run the Standalone CLI Audit Tool
 ```bash
 # Instant socket check (< 10ms)
-PYTHONPATH=.:packages python3 -m src.cli --check
+PYTHONPATH=.:packages python3.11 -m src.cli --check
 
 # Full Multi-Agent Repository Audit
-PYTHONPATH=.:packages python3 -m src.cli --audit-repo
+PYTHONPATH=.:packages python3.11 -m src.cli --audit-repo
 
 # Print Amazon Friction Log RFC
-PYTHONPATH=.:packages python3 -m src.cli --friction-log
+PYTHONPATH=.:packages python3.11 -m src.cli --friction-log
 ```
 
 ---

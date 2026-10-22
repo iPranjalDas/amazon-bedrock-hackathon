@@ -242,12 +242,19 @@ def terminate_zombie_process(pid: int, confirm: bool = False, timeout_sec: float
             "message": f"Action blocked by safety gate: Developer must explicitly confirm termination for PID {pid}."
         }
 
-    # Hard invariant: Protect init/systemd
+    # Hard invariant: Protect init/systemd and self processes
     if pid <= 1:
         return {
             "success": False,
             "error": "ILLEGAL_PID",
             "message": f"Refusing to touch system root PID {pid}."
+        }
+
+    if pid in (os.getpid(), os.getppid()):
+        return {
+            "success": False,
+            "error": "PROTECTED_SELF_PID",
+            "message": f"Refusing to terminate Sentinel's own active process (PID {pid})."
         }
 
     try:
