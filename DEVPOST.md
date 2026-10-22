@@ -4,7 +4,7 @@
 > **Track:** Track 1: Alexa+ (Agent Skills & Model Context Protocol)  
 > **Lead Architect:** Pranjal Das (`//Pranjal Das`)  
 > **Repository:** https://github.com/iPranjalDas/amazon-bedrock-hackathon  
-> **Official Release:** https://github.com/iPranjalDas/amazon-bedrock-hackathon/releases/tag/v1.3.3  
+> **Official Release:** https://github.com/iPranjalDas/amazon-bedrock-hackathon/releases/tag/v1.4.0  
 
 ---
 

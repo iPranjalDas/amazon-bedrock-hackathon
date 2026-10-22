@@ -150,6 +150,13 @@ class ArchitectureVisionVerifier:
             else:
                 return self._simulated_declared_topology()
 
+            # Sniff image format from binary magic bytes
+            img_format = "png"
+            if img_bytes.startswith(b"\xff\xd8\xff"):
+                img_format = "jpeg"
+            elif img_bytes.startswith(b"RIFF") and len(img_bytes) > 12 and img_bytes[8:12] == b"WEBP":
+                img_format = "webp"
+
             prompt = (
                 "You are an AWS Enterprise Systems Architect. Inspect this cloud architecture diagram. "
                 "Extract all declared compute services, microservices, databases, and gateways. "
@@ -169,7 +176,7 @@ class ArchitectureVisionVerifier:
                 messages=[{
                     "role": "user",
                     "content": [
-                        {"image": {"format": "png", "source": {"bytes": img_bytes}}},
+                        {"image": {"format": img_format, "source": {"bytes": img_bytes}}},
                         {"text": prompt}
                     ]
                 }],
