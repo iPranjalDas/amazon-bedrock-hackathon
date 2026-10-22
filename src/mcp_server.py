@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import time
+import base64
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional
