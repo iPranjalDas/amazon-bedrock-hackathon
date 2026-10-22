@@ -90,3 +90,44 @@ def test_download_patch_and_export_audit():
     assert "sentinel_forensic_audit.json" in audit_resp.headers["Content-Disposition"]
 
 
+def test_topology_svg_endpoint():
+    from src.mcp_server import generate_live_topology_svg
+
+    resp = generate_live_topology_svg()
+    assert resp.status_code == 200
+    assert "image/svg+xml" in resp.media_type
+    assert b"<svg" in resp.body
+    assert b"</svg>" in resp.body
+    assert "Content-Security-Policy" in resp.headers
+
+
+def test_simulate_incident_endpoint():
+    import asyncio
+    import json
+    from starlette.requests import Request
+    from src.mcp_server import simulate_cloud_incident
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/simulate-incident",
+        "headers": [(b"content-type", b"application/json")],
+    }
+    async def mock_receive():
+        return {
+            "type": "http.request",
+            "body": b'{"port": 3000, "pid": 8492, "process_name": "node-rogue-worker"}',
+            "more_body": False,
+        }
+
+    req = Request(scope, mock_receive)
+    resp = asyncio.run(simulate_cloud_incident(req))
+    data = json.loads(resp.body)
+    assert data["status"] == "INCIDENT_BROADCASTED"
+    assert data["incident"]["port"] == 3000
+    assert data["incident"]["pid"] == 8492
+    assert data["incident"]["is_simulated"] is True
+
+
+
+

@@ -1768,3 +1768,227 @@ body::before {
     font-weight: 800;
     margin-right: 5px;
 }
+
+/* ========================================================= */
+/* 20. PROACTIVE SENTRY ALERT BANNER & TOPOLOGY (v1.5.0)     */
+/* ========================================================= */
+.sentry-alert-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(254, 242, 242, 0.95), rgba(255, 237, 213, 0.9));
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.12);
+    animation: alertSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes alertSlideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.alert-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.alert-beacon-pulse {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    animation: beaconPulse 1.6s infinite;
+}
+
+@keyframes beaconPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.alert-badge {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #991b1b;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.alert-headline {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #7f1d1d;
+}
+
+.alert-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-alert-act {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-alert-act:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
+}
+
+.btn-alert-dismiss {
+    background: transparent;
+    color: #78716c;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: 1px solid rgba(120, 113, 108, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-alert-dismiss:hover {
+    background: rgba(120, 113, 108, 0.08);
+    color: #1c1917;
+}
+
+/* Sound Toggle Button */
+.visual-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-sound-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(67, 56, 202, 0.06);
+    border: 1px solid rgba(67, 56, 202, 0.2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sound-toggle:hover {
+    background: rgba(67, 56, 202, 0.12);
+    border-color: rgba(67, 56, 202, 0.35);
+}
+
+.btn-sound-toggle.active {
+    background: rgba(217, 119, 6, 0.12);
+    border-color: rgba(217, 119, 6, 0.35);
+    color: #b45309;
+}
+
+/* Multi-Turn Session Memory Strip */
+.session-memory-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: #fbfbfa;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.memory-badge {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--accent-indigo);
+    background: rgba(67, 56, 202, 0.08);
+    border: 1px solid rgba(67, 56, 202, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.memory-crumbs {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Topology Viewer & Stage */
+.topology-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.topology-stage {
+    min-height: 180px;
+    max-height: 220px;
+    background: #fafaf9;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.topology-stage svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.topology-loading {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.topology-meta-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.70rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    padding: 4px 2px;
+}
+
+.topology-meta-strip b {
+    color: var(--text-primary);
+}
+
+.pulse-green {
+    color: #15803d !important;
+    animation: blinkGlow 2s infinite ease-in-out;
+}
+
+@keyframes blinkGlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}

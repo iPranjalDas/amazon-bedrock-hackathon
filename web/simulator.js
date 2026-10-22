@@ -34,9 +34,119 @@ document.addEventListener("DOMContentLoaded", () => {
     const visionBadge = document.getElementById("visionBadge");
     const visionCardBody = document.getElementById("visionCardBody");
 
+    // Sentinel+ v1.5.0 Additions: Banner, Topology, Session Strip, Web Audio
+    const sentryAlertBanner = document.getElementById("sentryAlertBanner");
+    const alertHeadline = document.getElementById("alertHeadline");
+    const sessionMemoryStrip = document.getElementById("sessionMemoryStrip");
+    const memoryCrumbs = document.getElementById("memoryCrumbs");
+    const topologyStage = document.getElementById("topologyStage");
+    const topNodeCount = document.getElementById("topNodeCount");
+    const topEdgeCount = document.getElementById("topEdgeCount");
+
     let isSpeaking = false;
     let inFlightTimer = null;
     let pending2PC = null;
+    let activeSessionId = "sentinel_" + Math.random().toString(36).substring(2, 9);
+    let cachedTopologySvg = "";
+    let currentIncident = null;
+
+    // -------------------------------------------------------------
+    // Procedural Web Audio API APLA Synthesizer (Voice Blast / Art Museum Standard)
+    // -------------------------------------------------------------
+    let audioCtx = null;
+    let masterGain = null;
+    let chordOscillators = [];
+    let isAudioPlaying = false;
+
+    function initAplaAudio() {
+        if (audioCtx) return;
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(450, audioCtx.currentTime);
+
+            masterGain.connect(filter);
+            filter.connect(audioCtx.destination);
+
+            // Cmaj9 ambient frequencies: C3 (130.81Hz), G3 (196.00Hz), B3 (246.94Hz), E4 (329.63Hz)
+            const freqs = [130.81, 196.00, 246.94, 329.63];
+            freqs.forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                const oscGain = audioCtx.createGain();
+                oscGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                osc.connect(oscGain);
+                oscGain.connect(masterGain);
+
+                osc.start();
+                chordOscillators.push(osc);
+            });
+        } catch (e) {
+            console.warn("Web Audio API initialization failed:", e);
+        }
+    }
+
+    function duckAudio(duck) {
+        if (!audioCtx || !masterGain || !isAudioPlaying) return;
+        const targetGain = duck ? 0.012 : 0.06;
+        masterGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.15);
+    }
+
+    function toggleAudio() {
+        const btnToggle = document.getElementById("btnAplaSoundToggle");
+        const icon = document.getElementById("soundIcon");
+        const label = document.getElementById("soundLabel");
+
+        if (!audioCtx) initAplaAudio();
+
+        if (audioCtx && audioCtx.state === "suspended") {
+            audioCtx.resume();
+        }
+
+        isAudioPlaying = !isAudioPlaying;
+        if (isAudioPlaying) {
+            if (masterGain) masterGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.2);
+            if (btnToggle) btnToggle.classList.add("active");
+            if (icon) icon.textContent = "🔊";
+            if (label) label.textContent = "APLA Audio: On";
+        } else {
+            if (masterGain) masterGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.2);
+            if (btnToggle) btnToggle.classList.remove("active");
+            if (icon) icon.textContent = "🔇";
+            if (label) label.textContent = "APLA Audio: Off";
+        }
+    }
+
+    const soundToggleBtn = document.getElementById("btnAplaSoundToggle");
+    if (soundToggleBtn) soundToggleBtn.addEventListener("click", toggleAudio);
+
+    // -------------------------------------------------------------
+    // Multi-Turn Context Memory Strip Updater
+    // -------------------------------------------------------------
+    function updateSessionMemory(state) {
+        if (!memoryCrumbs) return;
+        if (!state) {
+            memoryCrumbs.textContent = `Session: ${activeSessionId} • Awaiting Commands`;
+            return;
+        }
+        const portStr = state.last_queried_port ? `Port :${state.last_queried_port}` : "No Port Bound";
+        const pidStr = state.last_detected_pid ? `PID ${state.last_detected_pid}` : null;
+        const intentStr = state.last_intent || "idle";
+        const pendingStr = state.confirmation_pending ? "⚠️ 2PC Affirmation Pending" : "Ready";
+        const parts = [`Session: ${activeSessionId}`, portStr];
+        if (pidStr) parts.push(pidStr);
+        parts.push(`Intent: ${intentStr}`);
+        parts.push(`State: ${pendingStr}`);
+        memoryCrumbs.textContent = parts.join(" • ");
+    }
+    updateSessionMemory(null);
 
     // -------------------------------------------------------------
     // 1. High-DPI Multi-Harmonic Audio Waveform Visualizer
@@ -172,6 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (input) input.value = "";
 
         isSpeaking = true;
+        duckAudio(true);
         duckingTag.textContent = "APLA DUCKING: 10% (SPEECH ACTIVE)";
         duckingTag.style.color = "var(--accent-gold)";
 
@@ -182,11 +293,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const resp = await fetch("/alexa/converse", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: query, confirm: confirm })
+                body: JSON.stringify({ query: query, confirm: confirm, session_id: activeSessionId })
             });
 
             const data = await resp.json();
             const elapsed = stopInFlightTimer();
+
+            // Synchronize multi-turn context memory state & topology
+            if (data.session_state) {
+                updateSessionMemory(data.session_state);
+            }
+            fetchRuntimeTopology();
 
             // Route 1: Fast Path (Procfs / Kernel sensor)
             if (data.route === "fast_path") {
@@ -257,6 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             setTimeout(() => {
                 isSpeaking = false;
+                duckAudio(false);
                 duckingTag.textContent = "APLA DUCKING: 25% AMBIENT HUM";
                 duckingTag.style.color = "var(--accent-gold)";
             }, 2500);
@@ -433,8 +551,91 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // -------------------------------------------------------------
-    // 9. Server-Sent Events (SSE) Telemetry Stream
+    // 9. Server-Sent Events (SSE) Telemetry Stream & Sentry Sentinel
     // -------------------------------------------------------------
+    function showIncidentAlert(incident) {
+        currentIncident = incident;
+        if (alertHeadline) {
+            alertHeadline.textContent = incident.headline || `Anomalous process on Port ${incident.target_port} (PID ${incident.target_pid})`;
+        }
+        if (sentryAlertBanner) {
+            sentryAlertBanner.style.display = "flex";
+        }
+        duckAudio(true);
+        setTimeout(() => duckAudio(false), 2500);
+        appendChatMessage(`🚨 PROACTIVE SENTRY ALERT: ${incident.headline}`, "Sentinel+ Proactive Sentry");
+        fetchRuntimeTopology();
+    }
+
+    window.dismissAlertBanner = function() {
+        if (sentryAlertBanner) sentryAlertBanner.style.display = "none";
+    };
+
+    window.handleAlertMitigation = function() {
+        window.dismissAlertBanner();
+        if (currentIncident && currentIncident.target_port) {
+            window.transmitQuery(`drain port ${currentIncident.target_port}`);
+        } else {
+            window.transmitQuery("drain port 3000");
+        }
+    };
+
+    window.triggerSimulateIncident = async function() {
+        try {
+            const resp = await fetch("/api/simulate-incident", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    incident_type: "zombie_process",
+                    target_port: 3000,
+                    target_pid: 8492
+                })
+            });
+            const res = await resp.json();
+            console.log("Simulated incident triggered:", res);
+        } catch (e) {
+            console.error("Failed to trigger simulated incident:", e);
+        }
+    };
+
+    // Topology SVG Engine & Exporter
+    async function fetchRuntimeTopology() {
+        if (!topologyStage) return;
+        try {
+            const resp = await fetch("/api/topology-svg");
+            if (!resp.ok) return;
+            const svgText = await resp.text();
+            cachedTopologySvg = svgText;
+            topologyStage.innerHTML = svgText;
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, "image/svg+xml");
+            const rects = doc.querySelectorAll("rect");
+            const lines = doc.querySelectorAll("line");
+            if (topNodeCount) topNodeCount.textContent = `${Math.max(rects.length - 1, 1)} Active`;
+            if (topEdgeCount) topEdgeCount.textContent = `${lines.length} Links`;
+        } catch (e) {
+            console.warn("Failed to fetch topology SVG:", e);
+        }
+    }
+    fetchRuntimeTopology();
+
+    window.downloadTopologySvg = function() {
+        if (!cachedTopologySvg) {
+            alert("Topology SVG not yet loaded. Please wait a moment.");
+            return;
+        }
+        const blob = new Blob([cachedTopologySvg], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `sentinel_topology_${Date.now()}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     function connectSSE() {
         const streamStatus = document.getElementById("streamStatus");
         const evtSource = new EventSource("/sse");
@@ -451,6 +652,12 @@ document.addEventListener("DOMContentLoaded", () => {
         evtSource.onmessage = (e) => {
             try {
                 const telemetry = JSON.parse(e.data);
+                // Check if proactive incident alert
+                if (telemetry.event === "INCIDENT_ALERT") {
+                    showIncidentAlert(telemetry);
+                    return;
+                }
+
                 if (metricListeners) metricListeners.textContent = telemetry.active_listeners;
                 if (metricZombies) metricZombies.textContent = telemetry.zombies_detected;
                 if (metricScanned) metricScanned.textContent = telemetry.total_scanned || 8;

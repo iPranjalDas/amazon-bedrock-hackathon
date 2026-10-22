@@ -42,6 +42,21 @@
                 </div>
             </nav>
 
+            <!-- ========================================================= -->
+            <!-- PROACTIVE SENTRY ALERT BANNER (Mommy-gram / EcoLafaek Closed-Loop Pattern) -->
+            <!-- ========================================================= -->
+            <div class="sentry-alert-banner" id="sentryAlertBanner" style="display: none;">
+                <div class="alert-banner-left">
+                    <span class="alert-beacon-pulse"></span>
+                    <span class="alert-badge">PROACTIVE SENTRY INCIDENT</span>
+                    <span class="alert-headline" id="alertHeadline">Kernel Anomaly Detected: Port 3000 Ghost Process</span>
+                </div>
+                <div class="alert-banner-actions">
+                    <button class="btn-alert-act" id="btnAlertAct" onclick="window.handleAlertMitigation()">Mitigate (2PC)</button>
+                    <button class="btn-alert-dismiss" onclick="window.dismissAlertBanner()">Dismiss</button>
+                </div>
+            </div>
+
             <!-- Hero Split Content -->
             <div class="hero-content-grid">
                 <!-- Left Hero: Typography, Meta, Mini Bento Cards -->
@@ -109,7 +124,13 @@
                                 <span class="dot-live"></span>
                                 <span>ALEXA+ MULTI-HARMONIC VOICE STREAM</span>
                             </div>
-                            <div class="ducking-badge" id="duckingTag">APLA DUCKING: 25% AMBIENT HUM</div>
+                            <div class="visual-card-actions">
+                                <button class="btn-sound-toggle" id="btnAplaSoundToggle" title="Toggle Procedural APLA Sound Synthesizer">
+                                    <span class="sound-icon" id="soundIcon">🔇</span>
+                                    <span class="sound-label" id="soundLabel">APLA Audio: Off</span>
+                                </button>
+                                <div class="ducking-badge" id="duckingTag">APLA DUCKING: 25% AMBIENT HUM</div>
+                            </div>
                         </div>
 
                         <!-- Canvas Waveform Visualizer -->
@@ -147,19 +168,19 @@
                 <span>✦ HARD MATH FIRST</span>
                 <span>✦ ZERO LLM ARITHMETIC HALLUCINATIONS</span>
                 <span>✦ TWO-PHASE COMMIT (2PC) SAFETY GATE</span>
-                <span>✦ SUB-10MS KERNEL SENSORS</span>
+                <span>✦ PROACTIVE RUNTIME TOPOLOGY</span>
                 <span>✦ BEDROCK MULTI-MODEL RESILIENCY MESH</span>
                 <span>✦ MODEL CONTEXT PROTOCOL OVER SSE</span>
                 <span>✦ APLA PROGRAMMATIC AUDIO DUCKING</span>
-                <span>✦ 39/39 PASSING TEST SUITE</span>
+                <span>✦ 45/45 PASSING TEST SUITE</span>
                 <span>✦ HARD MATH FIRST</span>
                 <span>✦ ZERO LLM ARITHMETIC HALLUCINATIONS</span>
                 <span>✦ TWO-PHASE COMMIT (2PC) SAFETY GATE</span>
-                <span>✦ SUB-10MS KERNEL SENSORS</span>
+                <span>✦ PROACTIVE RUNTIME TOPOLOGY</span>
                 <span>✦ BEDROCK MULTI-MODEL RESILIENCY MESH</span>
                 <span>✦ MODEL CONTEXT PROTOCOL OVER SSE</span>
                 <span>✦ APLA PROGRAMMATIC AUDIO DUCKING</span>
-                <span>✦ 39/39 PASSING TEST SUITE</span>
+                <span>✦ 45/45 PASSING TEST SUITE</span>
             </div>
         </div>
 
@@ -279,26 +300,27 @@
                     </div>
                 </div>
 
-                <!-- Bento 3: Distributed Fleet Saturation -->
-                <div class="bento-card">
+                <!-- Bento 3: Live Runtime Topology & Sentry Graph -->
+                <div class="bento-card" id="topologyCard">
                     <div class="bento-card-header">
-                        <div class="bento-title">🌐 Distributed Cluster Fleet</div>
-                        <span class="bento-pill">FLEET RBAC</span>
+                        <div class="bento-title">🌐 Live Runtime Topology</div>
+                        <div class="topology-header-actions">
+                            <button class="sample-chip" id="btnSimulateIncident" type="button" onclick="window.triggerSimulateIncident()" title="Simulate a real-time incident event">
+                                🚨 Trigger Incident
+                            </button>
+                            <button class="sample-chip" id="btnExportTopologySvg" type="button" onclick="window.downloadTopologySvg()" title="Export current topology as SVG vector graphic">
+                                📥 Export SVG
+                            </button>
+                        </div>
                     </div>
                     <div class="bento-body">
-                        <div class="fleet-meter-group">
-                            <div class="meter-item">
-                                <div class="meter-info"><span>dev-local</span> <b>12%</b></div>
-                                <div class="meter-bar"><div class="meter-fill" style="width: 12%;"></div></div>
-                            </div>
-                            <div class="meter-item">
-                                <div class="meter-info"><span>staging-ecs</span> <b>48%</b></div>
-                                <div class="meter-bar"><div class="meter-fill" style="width: 48%;"></div></div>
-                            </div>
-                            <div class="meter-item">
-                                <div class="meter-info"><span>production-k8s</span> <b>24%</b></div>
-                                <div class="meter-bar"><div class="meter-fill" style="width: 24%;"></div></div>
-                            </div>
+                        <div class="topology-stage" id="topologyStage">
+                            <div class="topology-loading">Generating Vector Topology...</div>
+                        </div>
+                        <div class="topology-meta-strip">
+                            <span>NODES: <b id="topNodeCount">5 Active</b></span>
+                            <span>CONNECTIONS: <b id="topEdgeCount">4 Links</b></span>
+                            <span>STATUS: <b class="pulse-green">REAL-TIME</b></span>
                         </div>
                         <button class="btn-card-action" onclick="window.transmitQuery('audit the production kubernetes cluster')">
                             <span>Inspect Production Fleet</span>
@@ -328,6 +350,12 @@
                     <div class="ops-panel-header">
                         <span class="ops-title">🎙️ Alexa+ Conversation Transcript</span>
                         <span class="ops-hint">Scrollable Session Ledger</span>
+                    </div>
+
+                    <!-- Multi-Turn Context Memory Strip (Oracus AI / AegisAgent Pattern) -->
+                    <div class="session-memory-strip" id="sessionMemoryStrip">
+                        <span class="memory-badge">CONTEXT MEMORY</span>
+                        <span class="memory-crumbs" id="memoryCrumbs">Session Initialized • Awaiting Queries</span>
                     </div>
 
                     <div class="chat-transcript-scroll" id="chatHistory">
@@ -521,15 +549,15 @@
         <!-- ========================================================= -->
         <footer class="app-footer">
             <div class="footer-left">
-                <span>SENTINEL+ ENTERPRISE V1.4.0</span>
+                <span>SENTINEL+ ENTERPRISE V1.5.0</span>
                 <span>•</span>
                 <span>BUILD, SHIP, SHAPE: AMAZON DEVELOPER HACKATHON</span>
                 <span>•</span>
                 <span>AUTHOR: PRANJAL DAS</span>
             </div>
             <div class="footer-right">
-                <span class="footer-badge">41/41 TESTS PASSING</span>
-                <span class="footer-badge">MCP OVER SSE</span>
+                <span class="footer-badge">45/45 TESTS PASSING</span>
+                <span class="footer-badge">VECTOR TOPOLOGY ENGINE</span>
                 <span class="footer-badge">AMAZON NOVA PRO</span>
             </div>
         </footer>

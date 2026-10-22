@@ -99,21 +99,129 @@ DESTRUCTIVE_PATTERNS = [
     (r"\b(close socket|force release)\b", "force_release")
 ]
 
+# Multi-Turn Anaphoric and Confirmation Patterns (Art Museum / Province Standard)
+ANAPHORIC_KILL_PATTERNS = [
+    r"\b(kill|terminate|stop|drain)\s+(it|this|that|process|worker|service)\b",
+    r"\b(kill|terminate|stop|drain)\s+the\s+(zombie|process|port|listener)\b",
+    r"\b(free|release|clear)\s+(it|this|that)\b"
+]
 
-def classify_intent_deterministic(query: str) -> RoutingDecision:
+AFFIRMATIVE_CONFIRM_PATTERNS = [
+    r"^(yes|confirm|proceed|do it|execute|go ahead|terminate it|kill it)\b",
+    r"\b(yes please|i confirm|confirmed)\b"
+]
+
+import threading
+from collections import OrderedDict
+
+class ConversationalSessionState:
+    """Retains ephemeral conversational context across sequential developer utterances."""
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.last_queried_port: Optional[int] = None
+        self.last_detected_pid: Optional[int] = None
+        self.last_intent: Optional[str] = None
+        self.confirmation_pending: bool = False
+        self.staged_incident_id: Optional[str] = None
+        self.last_touch_timestamp: float = time.time()
+
+    def update_touch(self):
+        self.last_touch_timestamp = time.time()
+
+    def model_dump(self) -> Dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "last_queried_port": self.last_queried_port,
+            "last_detected_pid": self.last_detected_pid,
+            "last_intent": self.last_intent,
+            "confirmation_pending": self.confirmation_pending,
+            "staged_incident_id": self.staged_incident_id,
+            "last_touch_timestamp": self.last_touch_timestamp
+        }
+
+
+class SessionManager:
+    """Thread-safe conversational session manager with LRU capacity (max 100) and 300s TTL."""
+    def __init__(self, max_sessions: int = 100, ttl_seconds: float = 300.0):
+        self._sessions: OrderedDict[str, ConversationalSessionState] = OrderedDict()
+        self._lock = threading.Lock()
+        self._max = max_sessions
+        self._ttl = ttl_seconds
+
+    def get_or_create(self, session_id: str = "default-dev") -> ConversationalSessionState:
+        # Sanitize session_id to prevent injection
+        clean_sid = re.sub(r"[^a-zA-Z0-9_\-]", "", str(session_id))[:64] or "default-dev"
+        with self._lock:
+            self._prune_expired()
+            if clean_sid in self._sessions:
+                session = self._sessions[clean_sid]
+                self._sessions.move_to_end(clean_sid)
+                session.update_touch()
+                return session
+            if len(self._sessions) >= self._max:
+                self._sessions.popitem(last=False)
+            session = ConversationalSessionState(clean_sid)
+            self._sessions[clean_sid] = session
+            return session
+
+    def _prune_expired(self):
+        now = time.time()
+        expired = [sid for sid, s in self._sessions.items() if now - s.last_touch_timestamp > self._ttl]
+        for sid in expired:
+            del self._sessions[sid]
+
+
+_GLOBAL_SESSIONS = SessionManager(max_sessions=100, ttl_seconds=300.0)
+
+
+def classify_intent_deterministic(query: str, session: Optional[ConversationalSessionState] = None) -> RoutingDecision:
     """
-    Sub-10ms Regex & Heuristic Classifier.
+    Sub-10ms Regex & Heuristic Classifier with Slot Carryover.
     Eliminates cold-start LLM latency for standard developer commands.
     """
     q_norm = query.lower().strip()
 
-    # Step 1: Intercept destructive operations
+    # Step 0: Check for 2PC Affirmative Confirmation on carried-over target
+    if session and session.confirmation_pending and (session.last_detected_pid or session.last_queried_port):
+        if any(re.search(pat, q_norm) for pat in AFFIRMATIVE_CONFIRM_PATTERNS):
+            return RoutingDecision(
+                route="destructive_action",
+                intent_category="confirmed_kill_slot",
+                confidence=0.99,
+                requires_2pc_confirm=False,
+                target_pid=session.last_detected_pid,
+                target_port=session.last_queried_port,
+                execution_plan=f"Execute confirmed 2PC termination on carried-over target (PID {session.last_detected_pid} / Port {session.last_queried_port}).",
+                raw_query=query
+            )
+
+    # Step 1: Check for Anaphoric Kill/Drain using Slot Carryover ("kill it", "drain it")
+    if session and (session.last_queried_port or session.last_detected_pid):
+        for pattern in ANAPHORIC_KILL_PATTERNS:
+            if re.search(pattern, q_norm):
+                session.confirmation_pending = True
+                return RoutingDecision(
+                    route="destructive_action",
+                    intent_category="drain_carried_over_slot",
+                    confidence=0.96,
+                    requires_2pc_confirm=True,
+                    target_pid=session.last_detected_pid,
+                    target_port=session.last_queried_port,
+                    execution_plan=f"Pause for 2PC confirmation to terminate carried-over target (Port {session.last_queried_port} / PID {session.last_detected_pid}).",
+                    raw_query=query
+                )
+
+    # Step 2: Intercept explicit destructive operations
     for pattern, intent in DESTRUCTIVE_PATTERNS:
         match = re.search(pattern, q_norm)
         if match:
             target_num = int(match.group(2)) if match.lastindex and match.lastindex >= 2 else None
             pid = target_num if "pid" in intent else None
             port = target_num if "port" in intent else None
+            if session:
+                if port: session.last_queried_port = port
+                if pid: session.last_detected_pid = pid
+                session.confirmation_pending = True
             return RoutingDecision(
                 route="destructive_action",
                 intent_category=intent,
@@ -125,11 +233,14 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
                 raw_query=query
             )
 
-    # Step 2: Intercept rapid status checks
+    # Step 3: Intercept rapid status checks (updates session.last_queried_port)
     for pattern, intent in FAST_PATH_PATTERNS:
         if re.search(pattern, q_norm):
             port_match = re.search(r"port\s*(\d+)", q_norm)
             port = int(port_match.group(1)) if port_match else None
+            if session and port:
+                session.last_queried_port = port
+                session.confirmation_pending = False
             return RoutingDecision(
                 route="fast_path",
                 intent_category=intent,
@@ -140,7 +251,7 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
                 raw_query=query
             )
 
-    # Step 3: Check for deep repository multi-agent audit
+    # Step 4: Check for deep repository multi-agent audit
     if re.search(r"\b(audit.*repo|aegisagent|run.*audit|stage.*patch|multi-agent|triage.*repo)\b", q_norm):
         return RoutingDecision(
             route="agentic_audit",
@@ -151,7 +262,7 @@ def classify_intent_deterministic(query: str) -> RoutingDecision:
             raw_query=query
         )
 
-    # Step 4: General conversational assistance routes to Amazon Nova Pro
+    # Step 5: General conversational assistance routes to Amazon Nova Pro
     return RoutingDecision(
         route="conversational_bedrock",
         intent_category="conversational_assistance",
@@ -294,49 +405,76 @@ def execute_fast_path(decision: RoutingDecision) -> FastPathResult:
         )
 
 
-def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str, Any]:
+def route_and_execute(query: str, confirm_destructive: bool = False, session_id: str = "default-dev") -> Dict[str, Any]:
     """
     Main dispatching gateway for Alexa voice utterances and web simulator inputs.
+    Features Multi-Turn Slot Carryover & 2PC Affirmative Confirmation (Art Museum / Province Standard).
     """
-    decision = classify_intent_deterministic(query)
+    session = _GLOBAL_SESSIONS.get_or_create(session_id)
+    decision = classify_intent_deterministic(query, session=session)
+    session.last_intent = decision.intent_category
 
     if decision.route == "fast_path":
         fast_res = execute_fast_path(decision)
+
+        # Hydrate session with detected active PID / Port
+        if fast_res.data and isinstance(fast_res.data, dict) and "findings" in fast_res.data:
+            for f in fast_res.data.get("findings", []):
+                pid_val = f.get("pid") if isinstance(f, dict) else getattr(f, "pid", None)
+                port_val = f.get("port") if isinstance(f, dict) else getattr(f, "port", None)
+                if pid_val and pid_val > 1:
+                    session.last_detected_pid = pid_val
+                    if port_val: session.last_queried_port = port_val
+                    break
+
         return {
             "route": "fast_path",
             "decision": decision.model_dump(),
-            "result": fast_res.model_dump()
+            "result": fast_res.model_dump(),
+            "session_state": session.model_dump()
         }
 
     elif decision.route == "destructive_action":
-        target_pid = decision.target_pid
-        if target_pid is None and decision.target_port is not None:
+        target_pid = decision.target_pid or session.last_detected_pid
+        target_port = decision.target_port or session.last_queried_port
+
+        if target_pid is None and target_port is not None:
             # Dynamically resolve PID holding target_port
             from src.socket_sentry import audit_local_sockets
-            report = audit_local_sockets(target_ports=[decision.target_port])
+            report = audit_local_sockets(target_ports=[target_port])
             for f in report.findings:
-                if f.port == decision.target_port and f.pid and f.pid > 1:
+                if f.port == target_port and f.pid and f.pid > 1:
                     target_pid = f.pid
+                    session.last_detected_pid = f.pid
                     break
 
-        if not confirm_destructive:
-            prompt_target = f"PID {target_pid}" if target_pid else f"service on port {decision.target_port}"
+        is_already_confirmed = confirm_destructive or (decision.intent_category == "confirmed_kill_slot")
+
+        if not is_already_confirmed:
+            session.confirmation_pending = True
+            if target_pid: session.last_detected_pid = target_pid
+            if target_port: session.last_queried_port = target_port
+
+            prompt_target = f"PID {target_pid}" if target_pid else f"service on port {target_port}"
             return {
                 "route": "destructive_action",
                 "status": "CONFIRMATION_REQUIRED",
                 "speech_text": f"Safety check: Are you sure you want to terminate {prompt_target}? Say 'confirm' to proceed.",
                 "decision": decision.model_dump(),
                 "requires_2pc_confirm": True,
-                "resolved_pid": target_pid
+                "resolved_pid": target_pid,
+                "session_state": session.model_dump()
             }
         else:
+            session.confirmation_pending = False
             if target_pid is None or target_pid <= 1:
                 return {
                     "route": "destructive_action",
                     "status": "ERROR",
-                    "speech_text": f"Cannot terminate: No active process PID found on port {decision.target_port or 'specified'}.",
+                    "speech_text": f"Cannot terminate: No active process PID found on port {target_port or 'specified'}.",
                     "decision": decision.model_dump(),
-                    "result": {"success": False, "message": "No PID found"}
+                    "result": {"success": False, "message": "No PID found"},
+                    "session_state": session.model_dump()
                 }
             term_res = terminate_zombie_process(target_pid, confirm=True)
             msg = (
@@ -344,12 +482,15 @@ def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str
                 if term_res.get("success") else
                 f"Failed to terminate PID {target_pid}: {term_res.get('message', 'unknown error')}"
             )
+            # Reset session after successful execution
+            session.last_detected_pid = None
             return {
                 "route": "destructive_action",
                 "status": "EXECUTED",
                 "speech_text": msg,
                 "decision": decision.model_dump(),
-                "result": term_res
+                "result": term_res,
+                "session_state": session.model_dump()
             }
 
     elif decision.route == "conversational_bedrock":
@@ -364,7 +505,8 @@ def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str
             "latency_ms": res.latency_ms,
             "model": res.active_model_id,
             "decision": decision.model_dump(),
-            "data": res.model_dump()
+            "data": res.model_dump(),
+            "session_state": session.model_dump()
         }
 
     else:
@@ -373,5 +515,6 @@ def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str
             "route": "agentic_audit",
             "status": "AGENTIC_LOOP_ENGAGED",
             "speech_text": "Engaging Sentinel multi-agent audit on target repository.",
-            "decision": decision.model_dump()
+            "decision": decision.model_dump(),
+            "session_state": session.model_dump()
         }
