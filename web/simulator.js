@@ -3,13 +3,13 @@
  * Sentinel+ Web Simulator Controller (web/simulator.js)
  * Author: Pranjal Das //Pranjal Das
  * 
- * Drives the interactive voice/SSE diagnostics console:
+ * Drives the interactive MANUS bento voice & diagnostics console:
  * - High-DPI 3-Wave multi-harmonic audio visualizer with Hann window envelope.
  * - Native Web Speech API (Microphone) voice ingress.
  * - Sub-10ms dispatch to the local FastAPI MCP server.
  * - Dynamic 2PC Confirmation cards for destructive operations.
  * - Live Server-Sent Events (SSE) telemetry feed populating the active ports table.
- * - Staged GitHub PR unified diff viewer and Amazon Friction Log renderer.
+ * - Tabbed workspace controller (AegisAgent Triad, Staged PR Diff, Amazon RFC).
  */
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("voiceQueryInput");
@@ -28,7 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const metricRisk = document.getElementById("metricRisk");
     const portsTableBody = document.getElementById("portsTableBody");
     const traceFeed = document.getElementById("traceFeed");
-    const stagedPrContainer = document.getElementById("stagedPrContainer");
     const prTitle = document.getElementById("prTitle");
     const prBranch = document.getElementById("prBranch");
     const prDiffContent = document.getElementById("prDiffContent");
@@ -67,12 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let w = 0; w < waveCount; w++) {
             ctx.beginPath();
             const freq = isSpeaking ? 0.024 * (w + 1) : 0.015;
-            const amp = isSpeaking ? (24 - w * 6) : (6 - w * 2);
+            const amp = isSpeaking ? (26 - w * 6) : (6 - w * 2);
             const currentPhase = wavePhase * (1 + w * 0.35);
 
             // Amazon Voice Palette: Alexa Cyan to Gold Orange
             const strokeColor = isSpeaking
-                ? (w === 0 ? "rgba(255, 153, 0, 0.9)" : "rgba(255, 85, 0, 0.45)")
+                ? (w === 0 ? "rgba(255, 153, 0, 0.95)" : "rgba(255, 85, 0, 0.45)")
                 : (w === 0 ? "rgba(0, 210, 255, 0.85)" : "rgba(0, 119, 255, 0.35)");
 
             ctx.lineWidth = w === 0 ? 2.5 : 1.2;
@@ -123,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         inFlightTimer = setInterval(() => {
             const elapsed = Math.round(performance.now() - t0);
             if (latencyMetrics) {
-                latencyMetrics.innerHTML = `<span>IN-FLIGHT: <b style="color:#ff9900;">${elapsed} ms</b></span> | <span>ROUTE: <b>ROUTING...</b></span>`;
+                latencyMetrics.innerHTML = `<span>IN-FLIGHT: <b style="color:#ff9900;">${elapsed} ms</b></span> | <span>ROUTE: <b>ROUTING...</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>`;
             }
         }, 20);
         return () => {
@@ -157,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("btn2PCCancel").onclick = () => {
             card.remove();
-            appendChatMessage("Action cancelled by developer. Zero state altered.", "🛡️ 2PC Safety Gate");
+            appendChatMessage("Action cancelled by developer. Zero system state altered.", "🛡️ 2PC Safety Gate");
             if (liveSpeechStream) liveSpeechStream.textContent = '"Action cancelled. Safe state preserved."';
             pending2PC = null;
         };
@@ -173,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (input) input.value = "";
 
         isSpeaking = true;
-        duckingTag.textContent = "APLA DUCKING: 10% (VOICE TRANSMISSION ACTIVE)";
+        duckingTag.textContent = "APLA DUCKING: 10% (SPEECH ACTIVE)";
         duckingTag.style.color = "#ff9900";
 
         const stopInFlightTimer = startInFlightTimer();
@@ -194,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const speech = data.result.speech_text;
                 appendChatMessage(speech, "⚡ Fast Path (Procfs)");
                 if (liveSpeechStream) liveSpeechStream.textContent = `"${speech}"`;
-                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.result.latency_ms} ms</b></span> | <span>ROUTE: <b>FAST PATH</b></span> | <span>STATUS: <b>VERIFIED</b></span>`;
+                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.result.latency_ms} ms</b></span> | <span>ROUTE: <b>FAST PATH</b></span> | <span>MODEL: <b>NOVA PRO</b></span>`;
                 appendTrace("FAST_ROUTER", "Deterministic Sub-10ms procfs", speech, "inspector");
 
                 // Check if multimodal diagram report was returned
@@ -202,16 +201,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     const rep = data.result.data;
                     visionBadge.textContent = rep.status;
                     visionBadge.style.color = rep.status === "VERIFIED_COMPLIANT" ? "#00e676" : "#ff9900";
-                    visionCardBody.innerHTML = `<b>Status:</b> ${rep.status} | <b>Drift Score:</b> ${rep.drift_score} | <b>Declared:</b> ${rep.declared_services_count} services | <b>Listeners:</b> ${rep.live_listeners_count}.<br>${rep.summary_verdict}`;
+                    visionCardBody.innerHTML = `<b>Status:</b> ${rep.status} | <b>Drift Score:</b> ${rep.drift_score}<br><b>Declared:</b> ${rep.declared_services_count} services | <b>Active:</b> ${rep.live_listeners_count} sockets.<br>${rep.summary_verdict}`;
                 }
 
                 // Check if PR diff was generated
                 if (data.decision.intent_category === "generate_pr" && data.result.data) {
                     const pr = data.result.data;
-                    stagedPrContainer.style.display = "block";
+                    switchTab("tabDiff");
                     prTitle.textContent = pr.pr_title;
                     prBranch.textContent = pr.branch_name;
                     prDiffContent.textContent = pr.unified_diff;
+                }
+
+                // Check if Friction Log was requested
+                if (data.decision.intent_category === "friction_log" && data.result.data) {
+                    switchTab("tabRfc");
                 }
             }
             // Route 2: Destructive Operation Intercepted by 2PC
@@ -242,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else {
                 appendChatMessage(data.speech_text || "Engaged multi-agent audit pipeline.", "🤖 AegisAgent Multi-Agent Loop");
                 if (liveSpeechStream) liveSpeechStream.textContent = `"${data.speech_text || 'Audit completed.'}"`;
-                latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>AGENTIC AUDIT</b></span> | <span>TRACE: <b>ACTIVE</b></span>`;
+                latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>AGENTIC AUDIT</b></span> | <span>MODEL: <b>NOVA PRO</b></span>`;
                 triggerAgenticAuditDemo();
             }
         } catch (err) {
@@ -259,7 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Expose transmitQuery globally for table action buttons
+    // Expose transmitQuery globally for table action buttons and mini bento cards
     window.transmitQuery = transmitQuery;
 
     // -------------------------------------------------------------
@@ -347,9 +351,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // -------------------------------------------------------------
-    // 7. Multi-Agent Audit Trigger & PR Stager
+    // 7. Tabbed Workspace Controller (AegisAgent, PR Diff, RFC)
+    // -------------------------------------------------------------
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    function switchTab(targetTabId) {
+        tabButtons.forEach(btn => {
+            if (btn.getAttribute("data-tab") === targetTabId) {
+                btn.classList.add("active");
+            } else {
+                btn.classList.remove("active");
+            }
+        });
+        document.querySelectorAll(".tab-content").forEach(content => {
+            if (content.id === targetTabId) {
+                content.classList.add("active");
+            } else {
+                content.classList.remove("active");
+            }
+        });
+    }
+
+    tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            switchTab(btn.getAttribute("data-tab"));
+        });
+    });
+
+    // -------------------------------------------------------------
+    // 8. Multi-Agent Audit Trigger & PR Stager
     // -------------------------------------------------------------
     async function triggerAgenticAuditDemo() {
+        switchTab("tabTrace");
         try {
             const resp = await fetch("/mcp/call", {
                 method: "POST",
@@ -379,7 +411,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 if (session.remediation_patch) {
                     const p = session.remediation_patch;
-                    stagedPrContainer.style.display = "block";
                     prTitle.textContent = p.pr_title || "Staged Unified Patch";
                     prBranch.textContent = p.patch_id || "sentinel/patch";
                     prDiffContent.textContent = p.diff_content;
@@ -402,7 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // -------------------------------------------------------------
-    // 8. Server-Sent Events (SSE) Telemetry Stream
+    // 9. Server-Sent Events (SSE) Telemetry Stream
     // -------------------------------------------------------------
     function connectSSE() {
         const streamStatus = document.getElementById("streamStatus");
@@ -412,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (streamStatus) {
                 streamStatus.innerHTML = `
                     <span class="status-dot online"></span>
-                    <span class="status-label">SSE TELEMETRY ACTIVE (PORT 8000)</span>
+                    <span class="status-text">SSE ACTIVE :8000</span>
                 `;
             }
         };
@@ -439,7 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (streamStatus) {
                 streamStatus.innerHTML = `
                     <span class="status-dot" style="background:#ff3366; box-shadow:0 0 8px #ff3366;"></span>
-                    <span class="status-label" style="color:#ff3366;">OFFLINE (RECONNECTING...)</span>
+                    <span class="status-text" style="color:#ff3366;">OFFLINE (RECONNECTING...)</span>
                 `;
             }
         };
@@ -447,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
     connectSSE();
 
     // -------------------------------------------------------------
-    // 9. Input & Preset Bindings
+    // 10. Input & Preset Bindings
     // -------------------------------------------------------------
     speakBtn.addEventListener("click", () => {
         transmitQuery(input.value);
@@ -457,7 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") transmitQuery(input.value);
     });
 
-    document.querySelectorAll(".preset-chip").forEach(chip => {
+    document.querySelectorAll(".chip").forEach(chip => {
         chip.addEventListener("click", () => {
             const q = chip.getAttribute("data-query");
             input.value = q;

@@ -4,214 +4,405 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentinel+ | Alexa+ Autonomous Infrastructure Sentry Simulator</title>
+    <title>Sentinel+ | Alexa+ Autonomous Infrastructure Sentry</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <!-- AWS & Alexa+ Developer Console Top Bar -->
-        <div class="aws-console-bar">
-            <div class="aws-brand-group">
-                <span class="aws-logo-text">AWS</span>
-                <span class="console-divider">/</span>
-                <span class="console-title">Alexa+ Developer Console</span>
-                <span class="env-pill dev">DEVELOPMENT</span>
+    <div class="layout-viewport">
+
+        <!-- ========================================================= -->
+        <!-- 1. MANUS HERO BENTO SHELL                                 -->
+        <!-- ========================================================= -->
+        <section class="hero-shell">
+            <!-- Top Integrated Navigation Bar -->
+            <nav class="shell-nav">
+                <div class="nav-brand">
+                    <div class="brand-orb"></div>
+                    <div class="brand-title">SENTINEL<span>+</span></div>
+                    <span class="nav-env-badge">ALEXA+ MCP</span>
+                </div>
+                
+                <div class="nav-links">
+                    <a href="#telemetrySection" class="nav-item active">Telemetry</a>
+                    <a href="#visionSection" class="nav-item">Multimodal Vision</a>
+                    <a href="#agentSection" class="nav-item">AegisAgent Triad</a>
+                    <a href="#rfcSection" class="nav-item">Amazon RFC</a>
+                </div>
+
+                <div class="nav-actions">
+                    <div class="stream-pill" id="streamStatus">
+                        <span class="status-dot online"></span>
+                        <span class="status-text">SSE ACTIVE :8000</span>
+                    </div>
+                    <button class="btn-nav-action" onclick="window.transmitQuery('is port 3000 free?')">
+                        <span>⚡ Quick Audit</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Hero Split Content -->
+            <div class="hero-content-grid">
+                <!-- Left Hero: Typography, Meta, Mini Bento Cards -->
+                <div class="hero-left">
+                    <div class="hero-eyebrow">
+                        <span class="eyebrow-pill">AWS DEVELOPER HACKATHON 2026</span>
+                        <span class="eyebrow-track">TRACK 1: ALEXA+ & MCP</span>
+                    </div>
+
+                    <h1 class="hero-heading">
+                        AUTONOMOUS SENTRY.<br>
+                        INSTANT KERNEL CONTROL.<br>
+                        <span class="highlight-gradient">ZERO HALLUCINATIONS.</span>
+                    </h1>
+
+                    <p class="hero-subtext">
+                        Deterministic Linux kernel procfs telemetry, eBPF TCP finite-state verification, and Amazon Bedrock Nova Pro multimodal reasoning paired with strict Two-Phase Commit safety gates.
+                    </p>
+
+                    <!-- 3 Mini Bento Cards (from bee_ui.ux layout) -->
+                    <div class="hero-mini-bento">
+                        <div class="mini-card" onclick="window.transmitQuery('is port 3000 free?')">
+                            <div class="mini-card-icon">⚡</div>
+                            <div class="mini-card-info">
+                                <div class="mini-card-title">Fast Path Sentry</div>
+                                <div class="mini-card-val">< 10ms Procfs</div>
+                            </div>
+                        </div>
+
+                        <div class="mini-card" onclick="window.transmitQuery('run ebpf socket state audit')">
+                            <div class="mini-card-icon">🔬</div>
+                            <div class="mini-card-info">
+                                <div class="mini-card-title">eBPF TCP FSM</div>
+                                <div class="mini-card-val">11 RFC 793 States</div>
+                            </div>
+                        </div>
+
+                        <div class="mini-card" onclick="window.transmitQuery('predict memory leak and socket anomalies')">
+                            <div class="mini-card-icon">📈</div>
+                            <div class="mini-card-info">
+                                <div class="mini-card-title">Anomaly Engine</div>
+                                <div class="mini-card-val">EWMA + Z-Score</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Preset Utterance Chips -->
+                    <div class="hero-presets">
+                        <span class="presets-label">SPOKEN PRESETS:</span>
+                        <div class="preset-chips-wrap">
+                            <button class="chip" data-query="is port 3000 free?">"is port 3000 free?"</button>
+                            <button class="chip" data-query="verify architecture diagram">"verify diagram"</button>
+                            <button class="chip" data-query="audit the production kubernetes cluster">"audit prod fleet"</button>
+                            <button class="chip" data-query="drain port 3000">"drain port 3000 (2PC)"</button>
+                            <button class="chip" data-query="generate pr">"stage git patch"</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Hero: Featured Visualizer & Interactive Voice Orb -->
+                <div class="hero-right">
+                    <div class="featured-visual-card">
+                        <div class="visual-card-header">
+                            <div class="visual-card-title">
+                                <span class="dot-live"></span>
+                                <span>ALEXA+ MULTI-HARMONIC VOICE STREAM</span>
+                            </div>
+                            <div class="ducking-badge" id="duckingTag">APLA DUCKING: 25% AMBIENT HUM</div>
+                        </div>
+
+                        <!-- Canvas Waveform Visualizer -->
+                        <div class="canvas-box">
+                            <canvas id="waveformCanvas" width="560" height="110"></canvas>
+                        </div>
+
+                        <!-- Speech Input Bar -->
+                        <div class="voice-transceiver-box">
+                            <button id="micBtn" class="btn-mic-toggle" title="Click to speak (Web Speech API)">
+                                <span class="mic-icon">🎙️</span>
+                                <span class="mic-label">Mic</span>
+                            </button>
+                            <input type="text" id="voiceQueryInput" placeholder="Speak or type: 'is port 3000 free?', 'verify diagram', 'kill PID 8492'..." />
+                            <button id="speakBtn" class="btn-transmit"><span>Transmit</span></button>
+                        </div>
+
+                        <!-- Live Vocal Banner -->
+                        <div class="live-speech-banner">
+                            <div class="banner-tag">ACTIVE ALEXA+ SPEECH SYNTHESIS</div>
+                            <div class="banner-text" id="liveSpeechStream">
+                                "Sentinel+ standing by. Listening for infrastructure queries, port diagnostics, or multimodal architecture verification."
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="console-metadata">
-                <span class="meta-pill"><span class="dot-live"></span> REGION: <b>us-east-1</b></span>
-                <span class="meta-pill">MODEL: <b>AMAZON NOVA PRO</b></span>
-                <span class="meta-pill">PROTOCOL: <b>MCP / SSE (STREAMABLE HTTP)</b></span>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 2. INFINITE TICKER MARQUEE RIBBON                         -->
+        <!-- ========================================================= -->
+        <div class="ticker-wrapper">
+            <div class="ticker-track">
+                <span>✦ HARD MATH FIRST</span>
+                <span>✦ ZERO LLM ARITHMETIC HALLUCINATIONS</span>
+                <span>✦ TWO-PHASE COMMIT (2PC) SAFETY GATE</span>
+                <span>✦ SUB-10MS KERNEL SENSORS</span>
+                <span>✦ BEDROCK MULTI-MODEL RESILIENCY MESH</span>
+                <span>✦ MODEL CONTEXT PROTOCOL OVER SSE</span>
+                <span>✦ APLA PROGRAMMATIC AUDIO DUCKING</span>
+                <span>✦ 39/39 PASSING TEST SUITE</span>
+                <span>✦ HARD MATH FIRST</span>
+                <span>✦ ZERO LLM ARITHMETIC HALLUCINATIONS</span>
+                <span>✦ TWO-PHASE COMMIT (2PC) SAFETY GATE</span>
+                <span>✦ SUB-10MS KERNEL SENSORS</span>
+                <span>✦ BEDROCK MULTI-MODEL RESILIENCY MESH</span>
+                <span>✦ MODEL CONTEXT PROTOCOL OVER SSE</span>
+                <span>✦ APLA PROGRAMMATIC AUDIO DUCKING</span>
+                <span>✦ 39/39 PASSING TEST SUITE</span>
             </div>
         </div>
 
-        <!-- App Brand Header -->
-        <header class="top-nav">
-            <div class="brand">
-                <div class="pulse-indicator"></div>
-                <div class="brand-text">
-                    <h1>SENTINEL<span>+</span></h1>
-                    <span class="sub-badge">AUTONOMOUS INFRASTRUCTURE & CODE SENTRY FOR ALEXA+</span>
+        <!-- ========================================================= -->
+        <!-- 3. BENTO GRID: TELEMETRY & KERNEL SENTRY                  -->
+        <!-- ========================================================= -->
+        <section class="section-container" id="telemetrySection">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">DIAGNOSTICS & TELEMETRY</h2>
+                    <p class="section-subtitle">Real-time Linux kernel procfs socket state, cgroups v2 memory, and distributed fleet topology</p>
                 </div>
+                <div class="section-badge">ORACUS FORMULA GROUND TRUTH</div>
             </div>
-            <div class="stream-status" id="streamStatus">
-                <span class="status-dot online"></span>
-                <span class="status-label">SSE TELEMETRY ACTIVE (PORT 8000)</span>
-            </div>
-        </header>
 
-        <!-- Main Dashboard Grid -->
-        <main class="dashboard-grid">
-            <!-- Left Column: Voice & Interaction Simulator -->
-            <section class="panel interaction-panel">
-                <div class="panel-header">
-                    <h2>🎙️ Alexa+ Voice & Multimodal Simulator</h2>
-                    <span class="badge loop-it-badge">Touch & Voice Parity</span>
+            <div class="telemetry-bento-grid">
+                <!-- Large Bento 1: Live Inspected Ports Table & Metrics -->
+                <div class="bento-card bento-wide">
+                    <div class="bento-card-header">
+                        <div class="bento-title">📊 Live Procfs Listening Sockets</div>
+                        <div class="bento-pill">AUTO-REFRESH (3S)</div>
+                    </div>
+
+                    <!-- 4 Metric Counters -->
+                    <div class="metrics-strip">
+                        <div class="metric-box">
+                            <span class="m-val" id="metricListeners">0</span>
+                            <span class="m-lbl">Active Listeners</span>
+                        </div>
+                        <div class="metric-box danger-box">
+                            <span class="m-val" id="metricZombies">0</span>
+                            <span class="m-lbl">Zombies Detected</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="m-val" id="metricScanned">8</span>
+                            <span class="m-lbl">Ports Audited</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="m-val" id="metricRisk">LOW</span>
+                            <span class="m-lbl">Infrastructure Risk</span>
+                        </div>
+                    </div>
+
+                    <!-- Inspected Ports Table -->
+                    <div class="ports-table-scroll">
+                        <table class="ports-table">
+                            <thead>
+                                <tr>
+                                    <th>PORT</th>
+                                    <th>PROCESS</th>
+                                    <th>PID</th>
+                                    <th>STATE</th>
+                                    <th>MEMORY</th>
+                                    <th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="portsTableBody">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Inspecting Linux kernel sockets via procfs...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- Waveform Canvas -->
-                <div class="waveform-container">
-                    <canvas id="waveformCanvas" width="560" height="96"></canvas>
-                    <div class="apla-ducking-tag" id="duckingTag">APLA DUCKING: 25% AMBIENT HUM</div>
-                </div>
-
-                <!-- Input Controls -->
-                <div class="voice-input-card">
-                    <div class="input-wrapper">
-                        <button id="micBtn" class="btn-mic" title="Click to speak (Web Speech API)">
-                            <span class="mic-icon">🎙️</span>
-                            <span class="mic-label">Mic</span>
+                <!-- Bento 2: Multimodal Architecture Diagram Verifier -->
+                <div class="bento-card" id="visionSection">
+                    <div class="bento-card-header">
+                        <div class="bento-title">📐 Bedrock Nova Pro Verifier</div>
+                        <span class="bento-pill vision-pill" id="visionBadge">STANDBY</span>
+                    </div>
+                    <div class="bento-body">
+                        <p class="vision-desc">
+                            Cross-references declared cloud architecture diagrams (PNG/JPEG/Mermaid) directly against live Linux procfs listening sockets.
+                        </p>
+                        <div class="vision-card-output" id="visionCardBody">
+                            No diagram audit currently active. Click below to verify against architecture specification.
+                        </div>
+                        <button class="btn-card-action" onclick="window.transmitQuery('verify architecture diagram')">
+                            <span>Audit Architecture Drift</span>
                         </button>
-                        <input type="text" id="voiceQueryInput" placeholder="Ask Alexa+: 'is port 3000 free?', 'verify architecture diagram', 'kill PID 8492'..." />
-                        <button id="speakBtn" class="btn-primary"><span>Transmit</span></button>
-                    </div>
-
-                    <!-- Instant Test Presets -->
-                    <div class="presets-row">
-                        <button class="preset-chip" data-query="is port 3000 free?">⚡ Fast Path (< 10ms)</button>
-                        <button class="preset-chip" data-query="verify architecture diagram">📐 Multimodal Vision</button>
-                        <button class="preset-chip" data-query="run ebpf socket state audit">🔬 eBPF Socket FSM</button>
-                        <button class="preset-chip" data-query="predict memory leak and socket anomalies">📈 Anomaly Z-Score</button>
-                        <button class="preset-chip" data-query="audit the production kubernetes cluster">🌐 Prod K8s Fleet</button>
-                        <button class="preset-chip" data-query="audit the repository for socket leaks">🧠 AegisAgent PR Stager</button>
-                        <button class="preset-chip" data-query="drain port 3000">🛡️ 2PC Safety Gate</button>
                     </div>
                 </div>
 
-                <!-- Active Voice Stream Banner -->
-                <div class="live-voice-banner">
-                    <div class="voice-banner-label">ACTIVE ALEXA+ SPEECH STREAM</div>
-                    <div class="voice-banner-body" id="liveSpeechStream">"Sentinel+ standing by. Listening for infrastructure queries, port diagnostics, or multimodal architecture verification."</div>
-                </div>
-
-                <!-- Conversational Chat Transcript -->
-                <div class="speech-output-card">
-                    <div class="chat-header-bar">
-                        <div class="speech-label">📜 MULTI-TURN CONVERSATION TRANSCRIPT</div>
-                        <div class="latency-metrics" id="latencyMetrics">
-                            <span>LATENCY: <b>0.0 ms</b></span> | <span>ROUTE: <b>IDLE</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>
+                <!-- Bento 3: Distributed Fleet Saturation -->
+                <div class="bento-card">
+                    <div class="bento-card-header">
+                        <div class="bento-title">🌐 Distributed Cluster Fleet</div>
+                        <span class="bento-pill">FLEET RBAC</span>
+                    </div>
+                    <div class="bento-body">
+                        <div class="fleet-meter-group">
+                            <div class="meter-item">
+                                <div class="meter-info"><span>dev-local</span> <b>12%</b></div>
+                                <div class="meter-bar"><div class="meter-fill" style="width: 12%;"></div></div>
+                            </div>
+                            <div class="meter-item">
+                                <div class="meter-info"><span>staging-ecs</span> <b>48%</b></div>
+                                <div class="meter-bar"><div class="meter-fill" style="width: 48%;"></div></div>
+                            </div>
+                            <div class="meter-item">
+                                <div class="meter-info"><span>production-k8s</span> <b>24%</b></div>
+                                <div class="meter-bar"><div class="meter-fill" style="width: 24%;"></div></div>
+                            </div>
                         </div>
+                        <button class="btn-card-action" onclick="window.transmitQuery('audit the production kubernetes cluster')">
+                            <span>Inspect Production Fleet</span>
+                        </button>
                     </div>
-                    <div class="chat-history-container" id="chatHistory">
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 4. OPERATIONS DECK: CHAT CONSOLE & MULTI-AGENT WORKSPACE  -->
+        <!-- ========================================================= -->
+        <section class="section-container" id="agentSection">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">COMMAND & OPERATIONS DECK</h2>
+                    <p class="section-subtitle">Multi-turn Alexa+ conversational console, Two-Phase Commit safety, and AegisAgent triad reasoning</p>
+                </div>
+                <div class="latency-metrics-pill" id="latencyMetrics">
+                    <span>IN-FLIGHT: <b>0 ms</b></span> | <span>ROUTE: <b>IDLE</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>
+                </div>
+            </div>
+
+            <div class="operations-grid">
+                <!-- Left: Multi-Turn Conversation Transcript with 2PC Cards -->
+                <div class="ops-panel transcript-panel">
+                    <div class="ops-panel-header">
+                        <span class="ops-title">🎙️ Alexa+ Conversation Transcript</span>
+                        <span class="ops-hint">Scrollable Session Ledger</span>
+                    </div>
+
+                    <div class="chat-transcript-scroll" id="chatHistory">
                         <div class="chat-msg assistant-msg">
-                            <div class="msg-meta"><span class="agent-tag">Amazon Nova Pro</span> <span class="time-tag">Sentinel+ Online</span></div>
-                            <div class="msg-body">"Sentinel+ v1.0 initialized. Model Context Protocol endpoints registered over Streamable HTTP SSE."</div>
+                            <div class="msg-meta">
+                                <span class="agent-tag">Amazon Nova Pro</span>
+                                <span class="time-tag">Sentinel+ Online</span>
+                            </div>
+                            <div class="msg-body">
+                                "Sentinel+ v1.3.0 initialized. Model Context Protocol endpoints registered over Streamable HTTP SSE. Standing by for infrastructure queries."
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
 
-            <!-- Right Column: Live Telemetry & Metrics -->
-            <section class="panel telemetry-panel">
-                <div class="panel-header">
-                    <h2>📊 Deterministic Procfs Telemetry</h2>
-                    <span class="badge oracus-badge">Hard Math First</span>
-                </div>
+                <!-- Right: Tabbed AegisAgent Trace, Staged PR Diff & Amazon RFC -->
+                <div class="ops-panel workspace-panel" id="rfcSection">
+                    <div class="workspace-tabs">
+                        <button class="tab-btn active" data-tab="tabTrace">🤖 AegisAgent Triad</button>
+                        <button class="tab-btn" data-tab="tabDiff">📄 Staged PR Diff</button>
+                        <button class="tab-btn" data-tab="tabRfc">📝 Amazon Feedback RFC</button>
+                    </div>
 
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-val" id="metricListeners">0</div>
-                        <div class="metric-title">Active Listeners</div>
+                    <!-- Tab 1: Triad Trace -->
+                    <div class="tab-content active" id="tabTrace">
+                        <div class="trace-feed-scroll" id="traceFeed">
+                            <div class="trace-entry inspector">
+                                <div class="trace-badge">INSPECTOR AGENT (EVIDENCE CURATOR)</div>
+                                <div class="trace-text">Procfs socket sensors and AST codebase crawler active. < 35ms scan latency.</div>
+                            </div>
+                            <div class="trace-entry auditor">
+                                <div class="trace-badge">AUDITOR CRITIC (SAFETY GATEKEEPER)</div>
+                                <div class="trace-text">Two-Phase Commit (2PC) enforced. Zero destructive mutations permitted without confirmation.</div>
+                            </div>
+                            <div class="trace-entry fixer">
+                                <div class="trace-badge">REMEDIATION FIXER (SANDBOX CODE GEN)</div>
+                                <div class="trace-text">AST-validated graceful socket drain generator ready for pull request staging.</div>
+                            </div>
+                        </div>
+                        <button class="btn-card-action" onclick="window.transmitQuery('audit the repository for socket leaks')">
+                            <span>Execute Multi-Agent Triad Audit</span>
+                        </button>
                     </div>
-                    <div class="metric-card danger-card">
-                        <div class="metric-val" id="metricZombies">0</div>
-                        <div class="metric-title">Zombie PIDs Detected</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-val" id="metricScanned">8</div>
-                        <div class="metric-title">Ports Audited</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-val" id="metricRisk">LOW</div>
-                        <div class="metric-title">Infrastructure Risk</div>
-                    </div>
-                </div>
 
-                <!-- Inspected Ports Table -->
-                <div class="ports-table-wrapper">
-                    <table class="ports-table">
-                        <thead>
-                            <tr>
-                                <th>PORT</th>
-                                <th>PROCESS</th>
-                                <th>PID</th>
-                                <th>STATE</th>
-                                <th>MEMORY</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody id="portsTableBody">
-                            <tr>
-                                <td colspan="6" class="empty-state">Inspecting Linux kernel sockets via procfs...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <!-- Tab 2: Staged Unified Diff PR -->
+                    <div class="tab-content" id="tabDiff">
+                        <div class="pr-preview-box">
+                            <div class="pr-meta-row">
+                                <span class="pr-badge-title" id="prTitle">fix(sentry): inject graceful SIGTERM socket draining</span>
+                                <span class="pr-badge-branch" id="prBranch">sentinel/patch-socket-leak</span>
+                            </div>
+                            <pre class="diff-view" id="prDiffContent">
+--- a/server.py
++++ b/server.py
+@@ -6,6 +6,19 @@
+ def health():
+     return {'status': 'healthy'}
+ 
++# --- Sentinel+ Autonomous Graceful Socket Draining Handler ---
++import signal
++import sys
++
++def _sentinel_sigterm_drain(sig, frame):
++    sys.stdout.write('[Sentinel+] SIGTERM received. Draining open sockets.\n')
++    sys.stdout.flush()
++    sys.exit(0)
++
++signal.signal(signal.SIGTERM, _sentinel_sigterm_drain)
++# ---------------------------------------------------------------
+                            </pre>
+                        </div>
+                        <button class="btn-card-action" onclick="window.transmitQuery('generate pr')">
+                            <span>Generate Fresh Unified Patch</span>
+                        </button>
+                    </div>
 
-                <!-- Multimodal Vision Status Card -->
-                <div class="vision-status-card" id="visionStatusCard">
-                    <div class="vision-card-header">
-                        <span>📐 BEDROCK NOVA PRO MULTIMODAL VERIFIER</span>
-                        <span class="badge-vision" id="visionBadge">STANDBY</span>
-                    </div>
-                    <div class="vision-card-body" id="visionCardBody">
-                        Upload or trigger architecture diagram audit to cross-reference declared cloud topologies against ground-truth Linux procfs listeners.
+                    <!-- Tab 3: Amazon RFC & 6-Column Friction Log -->
+                    <div class="tab-content" id="tabRfc">
+                        <div class="rfc-preview-box">
+                            <div class="rfc-header-tag">RFC-2026-04 & OFFICIAL 6-COLUMN FRICTION LOG</div>
+                            <p class="rfc-text"><b>Friction Finding 1:</b> Intermediate proxies buffered SSE chunks for 2.2s. <i>Fix:</i> Enforced <code>X-Accel-Buffering: no</code> and 15s keep-alive pings.</p>
+                            <p class="rfc-text"><b>Friction Finding 2:</b> Bedrock Converse rejected nested <code>$defs</code> in schemas. <i>Fix:</i> Flattened Pydantic schemas recursively.</p>
+                            <p class="rfc-text"><b>Friction Finding 3:</b> APLA 0.91 required manual volume sequencer math. <i>Fix:</i> Proposed native <code>AutoDucking</code> filter primitive for APLA 1.0.</p>
+                        </div>
+                        <button class="btn-card-action" onclick="window.transmitQuery('friction log')">
+                            <span>Query Live Friction Log Entry</span>
+                        </button>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Bottom Left: Multi-Agent Reasoning Trace & PR Stager -->
-            <section class="panel agents-panel">
-                <div class="panel-header">
-                    <h2>🤖 AegisAgent Triad Reasoning Trace & Staged PR</h2>
-                    <span class="badge aegis-badge">Inspector ➔ Auditor ➔ Fixer</span>
-                </div>
-                <div class="trace-feed" id="traceFeed">
-                    <div class="trace-entry inspector">
-                        <div class="trace-badge">INSPECTOR AGENT</div>
-                        <div class="trace-text">Ready to curate procfs socket inodes and AST repository handlers.</div>
-                    </div>
-                    <div class="trace-entry auditor">
-                        <div class="trace-badge">AUDITOR CRITIC</div>
-                        <div class="trace-text">Zero-trust safety rules loaded. Two-Phase Commit (2PC) gate enforced for mutations.</div>
-                    </div>
-                    <div class="trace-entry fixer">
-                        <div class="trace-badge">REMEDIATION FIXER</div>
-                        <div class="trace-text">Sandbox patch engine standing by to generate AST-validated GitHub PRs.</div>
-                    </div>
-                </div>
+        <!-- ========================================================= -->
+        <!-- 5. COMPLIANCE FOOTER                                      -->
+        <!-- ========================================================= -->
+        <footer class="app-footer">
+            <div class="footer-left">
+                <span>SENTINEL+ ENTERPRISE V1.3.0</span>
+                <span>•</span>
+                <span>BUILD, SHIP, SHAPE: AMAZON DEVELOPER HACKATHON</span>
+                <span>•</span>
+                <span>AUTHOR: PRANJAL DAS</span>
+            </div>
+            <div class="footer-right">
+                <span class="footer-badge">39/39 TESTS PASSING</span>
+                <span class="footer-badge">MCP OVER SSE</span>
+                <span class="footer-badge">AMAZON NOVA PRO</span>
+            </div>
+        </footer>
 
-                <!-- Dynamic Staged Git Diff Container -->
-                <div class="staged-pr-container" id="stagedPrContainer" style="display:none;">
-                    <div class="pr-header">
-                        <span class="pr-title" id="prTitle">Staged Pull Request</span>
-                        <span class="pr-branch" id="prBranch">branch</span>
-                    </div>
-                    <pre class="diff-box" id="prDiffContent"></pre>
-                </div>
-            </section>
-
-            <!-- Bottom Right: Amazon Friction Log & MCP Protocols -->
-            <section class="panel friction-panel">
-                <div class="panel-header">
-                    <h2>📝 Amazon Developer Friction Log & SDK RFC</h2>
-                    <span class="badge bonus-badge">+10% Stage 1 Bonus RFC</span>
-                </div>
-                <div class="friction-card" id="frictionCard">
-                    <div class="rfc-title" id="rfcTitle">RFC-2026-04: Streamable HTTP MCP Standard for Alexa+</div>
-                    <div class="rfc-body" id="rfcBody">
-                        <p><b>Observation:</b> Developers building advanced autonomous tools for Alexa+ face an ecosystem barrier: existing tools default to local stdio transports, whereas modern microservices require <b>Streamable HTTP (SSE)</b> with JSON-RPC 2.0.</p>
-                        <p><b>Sentinel+ Fix:</b> Provides an open-source reference server implementing low-latency SSE broadcasting, token-bucket concurrency, and declarative APLA volume ducking.</p>
-                    </div>
-                    <div class="mcp-endpoints">
-                        <span>ENDPOINT: <code>/mcp/call</code></span>
-                        <span>TRANSPORT: <code>HTTP SSE</code></span>
-                        <span>SPECS: <code>agentskills.io</code></span>
-                    </div>
-                </div>
-            </section>
-        </main>
     </div>
 
     <script src="simulator.js"></script>
