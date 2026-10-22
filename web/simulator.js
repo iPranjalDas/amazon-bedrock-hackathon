@@ -69,10 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const amp = isSpeaking ? (26 - w * 6) : (6 - w * 2);
             const currentPhase = wavePhase * (1 + w * 0.35);
 
-            // Amazon Voice Palette: Alexa Cyan to Gold Orange
+            // Luxury Palette: Electric Sky & Linear Indigo (idle) -> Champagne Gold & Amber (speaking)
             const strokeColor = isSpeaking
-                ? (w === 0 ? "rgba(255, 153, 0, 0.95)" : "rgba(255, 85, 0, 0.45)")
-                : (w === 0 ? "rgba(0, 210, 255, 0.85)" : "rgba(0, 119, 255, 0.35)");
+                ? (w === 0 ? "rgba(251, 191, 36, 0.95)" : (w === 1 ? "rgba(245, 158, 11, 0.55)" : "rgba(217, 119, 6, 0.3)"))
+                : (w === 0 ? "rgba(56, 189, 248, 0.9)" : "rgba(99, 102, 241, 0.4)");
 
             ctx.lineWidth = w === 0 ? 2.5 : 1.2;
             ctx.strokeStyle = strokeColor;
