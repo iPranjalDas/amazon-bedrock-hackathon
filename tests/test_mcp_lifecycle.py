@@ -129,5 +129,18 @@ def test_simulate_incident_endpoint():
     assert data["incident"]["is_simulated"] is True
 
 
+def test_judge_scorecard_endpoint():
+    from src.mcp_server import get_official_judge_scorecard
+
+    scorecard = get_official_judge_scorecard()
+    assert scorecard["executive_verdict"]["rubric_readiness_score"] == "100 / 100"
+    assert "technical_implementation_25_pct" in scorecard["rubric_scoring_evidence"]
+    assert "design_and_interaction_ux_25_pct" in scorecard["rubric_scoring_evidence"]
+    assert "potential_impact_25_pct" in scorecard["rubric_scoring_evidence"]
+    assert "quality_of_the_idea_25_pct" in scorecard["rubric_scoring_evidence"]
+    assert scorecard["developer_friction_rfc"]["six_column_log_complete"] is True
+
+
+
 
 

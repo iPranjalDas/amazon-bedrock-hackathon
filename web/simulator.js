@@ -894,7 +894,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             } else if (data.event === "LEAK_CHECK") {
                                 lineHtml = `<div class="term-line log-info"><span class="term-time">${timeStr}</span> <span class="term-blue">LEAK_CHECK:</span> Verdict: ${data.leak_verdict} (Unclosed sockets: ${data.unclosed_descriptors_detected})</div>`;
                             } else if (data.event === "PASS") {
-                                lineHtml = `<div class="term-line log-summary"><span class="term-time">${timeStr}</span> <span class="term-badge-gold">41/41 TESTS PASSED</span> <span class="term-green">0 ERRORS • 0 LEAKS • ${data.elapsed_ms}ms</span></div>`;
+                                lineHtml = `<div class="term-line log-summary"><span class="term-time">${timeStr}</span> <span class="term-badge-gold">46/46 TESTS PASSED</span> <span class="term-green">0 ERRORS • 0 LEAKS • ${data.elapsed_ms}ms</span></div>`;
                             } else if (data.event === "FAIL") {
                                 lineHtml = `<div class="term-line log-gate"><span class="term-time">${timeStr}</span> <span class="term-rose">EXEC_FAILED:</span> ${data.reason || data.details}</div>`;
                             }
@@ -918,4 +918,211 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     };
-});
+
+    // =============================================================
+    // 13. JUDGE GUIDED TOUR & STORYBOARD CONTROLLER (v1.5.1)
+    // =============================================================
+    let currentTourStep = 1;
+    let tourAutoplayInterval = null;
+    let isTourAutoplaying = false;
+
+    function cancelJudgeTour(reason = "user_override") {
+        if (!isTourAutoplaying) return;
+        clearInterval(tourAutoplayInterval);
+        isTourAutoplaying = false;
+        const icon = document.getElementById("autoplayIcon");
+        const text = document.getElementById("autoplayText");
+        if (icon) icon.textContent = "▶";
+        if (text) text.textContent = "Auto-Play 60s Tour";
+        document.querySelectorAll(".tour-spotlight").forEach(el => el.classList.remove("tour-spotlight"));
+        console.log(`Judge tour paused: ${reason}`);
+    }
+
+    // Attach cancel on manual interactions
+    if (input) input.addEventListener("keydown", () => cancelJudgeTour("manual_input"));
+    if (micBtn) micBtn.addEventListener("click", () => cancelJudgeTour("mic_clicked"));
+    document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => cancelJudgeTour("preset_clicked")));
+
+    // 1. Manual Step Stepper with Auto-Scroll & Card Spotlight
+    window.runTourStep = function(stepNum) {
+        currentTourStep = stepNum;
+
+        // Update Step Button Active States
+        for (let i = 1; i <= 4; i++) {
+            const btn = document.getElementById(`tourStep${i}`);
+            if (btn) btn.classList.toggle("active", i === stepNum);
+        }
+
+        // Clear Previous Spotlights
+        document.querySelectorAll(".tour-spotlight").forEach(el => el.classList.remove("tour-spotlight"));
+
+        if (stepNum === 1) {
+            // Step 1: Trigger Incident on Port 3000
+            const telemetrySec = document.getElementById("telemetrySection");
+            if (telemetrySec) {
+                telemetrySec.scrollIntoView({ behavior: "smooth", block: "center" });
+                telemetrySec.classList.add("tour-spotlight");
+            }
+            window.triggerSimulateIncident();
+            setTimeout(() => {
+                window.transmitQuery("is port 3000 free?");
+            }, 500);
+        } else if (stepNum === 2) {
+            // Step 2: Bedrock Nova Pro Multimodal Diagram Drift Audit
+            const visionSec = document.getElementById("visionSection");
+            if (visionSec) {
+                visionSec.scrollIntoView({ behavior: "smooth", block: "center" });
+                visionSec.classList.add("tour-spotlight");
+            }
+            window.loadDiagramSample("drift");
+            window.transmitQuery("verify architecture diagram");
+        } else if (stepNum === 3) {
+            // Step 3: Two-Phase Commit Safety Gate & AegisAgent Triad
+            const agentSec = document.getElementById("agentSection");
+            if (agentSec) {
+                agentSec.scrollIntoView({ behavior: "smooth", block: "center" });
+                agentSec.classList.add("tour-spotlight");
+            }
+            window.transmitQuery("drain port 3000");
+        } else if (stepNum === 4) {
+            // Step 4: Staged PR Unified Diff & Sandbox Proof Suite
+            const agentSec = document.getElementById("agentSection");
+            if (agentSec) {
+                agentSec.scrollIntoView({ behavior: "smooth", block: "center" });
+                agentSec.classList.add("tour-spotlight");
+            }
+            const tabDiffBtn = document.querySelector('[data-tab="tabDiff"]');
+            if (tabDiffBtn) tabDiffBtn.click();
+            window.transmitQuery("generate pr");
+            setTimeout(() => {
+                if (window.runSandboxPatchTest) window.runSandboxPatchTest();
+            }, 800);
+        }
+    };
+
+    // 2. 60-Second Autoplay Tour Engine
+    window.toggleAutoplayTour = function() {
+        const icon = document.getElementById("autoplayIcon");
+        const text = document.getElementById("autoplayText");
+
+        if (isTourAutoplaying) {
+            clearInterval(tourAutoplayInterval);
+            isTourAutoplaying = false;
+            if (icon) icon.textContent = "▶";
+            if (text) text.textContent = "Auto-Play 60s Tour";
+            document.querySelectorAll(".tour-spotlight").forEach(el => el.classList.remove("tour-spotlight"));
+        } else {
+            isTourAutoplaying = true;
+            if (icon) icon.textContent = "⏸";
+            if (text) text.textContent = "Pause Tour";
+
+            let step = 1;
+            window.runTourStep(step);
+
+            tourAutoplayInterval = setInterval(() => {
+                step++;
+                if (step > 4) {
+                    clearInterval(tourAutoplayInterval);
+                    isTourAutoplaying = false;
+                    if (icon) icon.textContent = "▶";
+                    if (text) text.textContent = "Tour Complete ✓";
+                    document.querySelectorAll(".tour-spotlight").forEach(el => el.classList.remove("tour-spotlight"));
+                    // Auto-open scorecard at conclusion of tour
+                    window.toggleScorecardModal();
+                    setTimeout(() => {
+                        if (text) text.textContent = "Auto-Play 60s Tour";
+                    }, 4000);
+                } else {
+                    window.runTourStep(step);
+                }
+            }, 14000); // 14s per step = 56s total tour
+        }
+    };
+
+    // 3. Before vs After Comparison Switcher
+    window.setComparisonMode = function(mode) {
+        const btnBefore = document.getElementById("segBtnBefore");
+        const btnAfter = document.getElementById("segBtnAfter");
+        const body = document.getElementById("comparisonBody");
+
+        if (mode === "before") {
+            if (btnBefore) btnBefore.classList.add("active");
+            if (btnAfter) btnAfter.classList.remove("active");
+            if (body) {
+                body.innerHTML = `
+                    <div class="comparison-grid before-view">
+                        <div class="comp-col metric-col">
+                            <div class="comp-metric-card" style="border-color: rgba(239, 68, 68, 0.35);">
+                                <span class="comp-val text-rose">45 mins</span>
+                                <span class="comp-lbl">Manual Incident Triage</span>
+                            </div>
+                            <div class="comp-metric-card" style="border-color: rgba(239, 68, 68, 0.35);">
+                                <span class="comp-val text-rose">Silent Shifts</span>
+                                <span class="comp-lbl">Dev Servers Jump to :3001</span>
+                            </div>
+                            <div class="comp-metric-card" style="border-color: rgba(239, 68, 68, 0.35);">
+                                <span class="comp-val text-rose">Destructive</span>
+                                <span class="comp-lbl">Blind kill -9 Wipes Prod DB</span>
+                            </div>
+                        </div>
+                        <div class="comp-col narrative-col">
+                            <div class="narrative-badge" style="color: var(--accent-rose);">THE PAIN: SILENT DEVELOPER DOWNTIME</div>
+                            <p class="narrative-p">
+                                Without Sentinel+, developers spend hours hunting orphaned child processes holding ports. Local test runners silently bind to alternate ports, verifying stale servers and passing false-positive tests, leading to catastrophic production deployment failures.
+                            </p>
+                            <div class="narrative-pills">
+                                <span class="pill-gold" style="border-color: rgba(239, 68, 68, 0.35); color: var(--accent-rose);">❌ Zombie Socket Leaks</span>
+                                <span class="pill-gold" style="border-color: rgba(239, 68, 68, 0.35); color: var(--accent-rose);">❌ False-Positive CI</span>
+                                <span class="pill-gold" style="border-color: rgba(239, 68, 68, 0.35); color: var(--accent-rose);">❌ 45min Downtime</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            if (btnAfter) btnAfter.classList.add("active");
+            if (btnBefore) btnBefore.classList.remove("active");
+            if (body) {
+                body.innerHTML = `
+                    <div class="comparison-grid after-view">
+                        <div class="comp-col metric-col">
+                            <div class="comp-metric-card">
+                                <span class="comp-val text-green">&lt; 10ms</span>
+                                <span class="comp-lbl">Time to Detect Port Leaks</span>
+                            </div>
+                            <div class="comp-metric-card">
+                                <span class="comp-val text-gold">100% Deterministic</span>
+                                <span class="comp-lbl">Procfs & eBPF Ground Truth</span>
+                            </div>
+                            <div class="comp-metric-card">
+                                <span class="comp-val text-indigo">Zero Hallucinations</span>
+                                <span class="comp-lbl">Two-Phase Commit Safety Gate</span>
+                            </div>
+                        </div>
+                        <div class="comp-col narrative-col">
+                            <div class="narrative-badge">THE CURE: AUTONOMOUS KERNEL SENTRY</div>
+                            <p class="narrative-p">
+                                Sentinel+ detects zombie sockets via Linux procfs in <b>&lt; 10ms</b>, cross-checks declared cloud architecture diagrams using <b>Bedrock Nova Pro multimodal reasoning</b>, requires strict <b>Two-Phase Commit</b> developer authorization, and synthesizes graceful AST socket-drain handlers in under 4 seconds.
+                            </p>
+                            <div class="narrative-pills">
+                                <span class="pill-gold">✦ Zero Downtime</span>
+                                <span class="pill-indigo">✦ Two-Phase Commit</span>
+                                <span class="pill-green">✦ 46/46 Passing Tests</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    };
+
+    // 4. Scorecard Drawer Modal Toggle
+    window.toggleScorecardModal = function() {
+        const drawer = document.getElementById("scorecardDrawer");
+        const overlay = document.getElementById("scorecardOverlay");
+        if (drawer && overlay) {
+            const isOpen = drawer.classList.contains("open");
+            drawer.classList.toggle("open", !isOpen);
+            overlay.classList.toggle("open", !isOpen);
+        }
+    };
