@@ -1,0 +1,92 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "sentinel plus",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AuditPortsIntent",
+          "slots": [
+            {
+              "name": "targetPort",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "is port {targetPort} free",
+            "check port {targetPort}",
+            "is port {targetPort} running",
+            "inspect open listeners",
+            "audit listening sockets"
+          ]
+        },
+        {
+          "name": "RemediateSocketIntent",
+          "slots": [
+            {
+              "name": "targetPid",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "targetPort",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "kill process {targetPid}",
+            "kill PID {targetPid}",
+            "terminate PID {targetPid}",
+            "drain port {targetPort}",
+            "clear port {targetPort}"
+          ]
+        },
+        {
+          "name": "VerifyDiagramIntent",
+          "slots": [],
+          "samples": [
+            "verify architecture diagram",
+            "verify diagram",
+            "audit visual topology",
+            "check architecture drift"
+          ]
+        },
+        {
+          "name": "ClusterFleetIntent",
+          "slots": [
+            {
+              "name": "clusterName",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "audit the {clusterName} cluster",
+            "check fleet health",
+            "audit production cluster",
+            "audit staging cluster"
+          ]
+        },
+        {
+          "name": "AnomalyPredictIntent",
+          "slots": [],
+          "samples": [
+            "predict memory leaks",
+            "predict anomalies",
+            "check socket exhaustion risk"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}

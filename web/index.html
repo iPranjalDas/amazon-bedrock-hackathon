@@ -7,17 +7,32 @@
     <title>Sentinel+ | Alexa+ Autonomous Infrastructure Sentry Simulator</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
-        <!-- Top Navigation -->
+        <!-- AWS & Alexa+ Developer Console Top Bar -->
+        <div class="aws-console-bar">
+            <div class="aws-brand-group">
+                <span class="aws-logo-text">AWS</span>
+                <span class="console-divider">/</span>
+                <span class="console-title">Alexa+ Developer Console</span>
+                <span class="env-pill dev">DEVELOPMENT</span>
+            </div>
+            <div class="console-metadata">
+                <span class="meta-pill"><span class="dot-live"></span> REGION: <b>us-east-1</b></span>
+                <span class="meta-pill">MODEL: <b>AMAZON NOVA PRO</b></span>
+                <span class="meta-pill">PROTOCOL: <b>MCP / SSE (STREAMABLE HTTP)</b></span>
+            </div>
+        </div>
+
+        <!-- App Brand Header -->
         <header class="top-nav">
             <div class="brand">
                 <div class="pulse-indicator"></div>
                 <div class="brand-text">
                     <h1>SENTINEL<span>+</span></h1>
-                    <span class="sub-badge">ALEXA+ MCP STREAMABLE HTTP SENTRY</span>
+                    <span class="sub-badge">AUTONOMOUS INFRASTRUCTURE & CODE SENTRY FOR ALEXA+</span>
                 </div>
             </div>
             <div class="stream-status" id="streamStatus">
@@ -26,43 +41,54 @@
             </div>
         </header>
 
-        <!-- Main Layout -->
+        <!-- Main Dashboard Grid -->
         <main class="dashboard-grid">
             <!-- Left Column: Voice & Interaction Simulator -->
             <section class="panel interaction-panel">
                 <div class="panel-header">
                     <h2>🎙️ Alexa+ Voice & Multimodal Simulator</h2>
-                    <span class="badge loop-it-badge">Loop It! Touch/Voice Parity</span>
+                    <span class="badge loop-it-badge">Touch & Voice Parity</span>
                 </div>
 
                 <!-- Waveform Canvas -->
                 <div class="waveform-container">
-                    <canvas id="waveformCanvas" width="480" height="90"></canvas>
+                    <canvas id="waveformCanvas" width="560" height="96"></canvas>
                     <div class="apla-ducking-tag" id="duckingTag">APLA DUCKING: 25% AMBIENT HUM</div>
                 </div>
 
                 <!-- Input Controls -->
                 <div class="voice-input-card">
                     <div class="input-wrapper">
-                        <input type="text" id="voiceQueryInput" placeholder="Ask Alexa+: 'is port 3000 free?', 'audit repository', 'kill PID 8492'..." />
+                        <button id="micBtn" class="btn-mic" title="Click to speak (Web Speech API)">
+                            <span class="mic-icon">🎙️</span>
+                            <span class="mic-label">Mic</span>
+                        </button>
+                        <input type="text" id="voiceQueryInput" placeholder="Ask Alexa+: 'is port 3000 free?', 'verify architecture diagram', 'kill PID 8492'..." />
                         <button id="speakBtn" class="btn-primary"><span>Transmit</span></button>
                     </div>
 
                     <!-- Instant Test Presets -->
                     <div class="presets-row">
                         <button class="preset-chip" data-query="is port 3000 free?">⚡ Fast Path (< 10ms)</button>
+                        <button class="preset-chip" data-query="verify architecture diagram">📐 Multimodal Vision</button>
                         <button class="preset-chip" data-query="run ebpf socket state audit">🔬 eBPF Socket FSM</button>
                         <button class="preset-chip" data-query="predict memory leak and socket anomalies">📈 Anomaly Z-Score</button>
                         <button class="preset-chip" data-query="audit the production kubernetes cluster">🌐 Prod K8s Fleet</button>
-                        <button class="preset-chip" data-query="audit the repository for socket leaks">🧠 AegisAgent Audit</button>
-                        <button class="preset-chip" data-query="kill PID 8492">🛡️ 2PC Safety Gate</button>
+                        <button class="preset-chip" data-query="audit the repository for socket leaks">🧠 AegisAgent PR Stager</button>
+                        <button class="preset-chip" data-query="drain port 3000">🛡️ 2PC Safety Gate</button>
                     </div>
                 </div>
 
-                <!-- Alexa Speech Output & Conversational Chat Feed -->
+                <!-- Active Voice Stream Banner -->
+                <div class="live-voice-banner">
+                    <div class="voice-banner-label">ACTIVE ALEXA+ SPEECH STREAM</div>
+                    <div class="voice-banner-body" id="liveSpeechStream">"Sentinel+ standing by. Listening for infrastructure queries, port diagnostics, or multimodal architecture verification."</div>
+                </div>
+
+                <!-- Conversational Chat Transcript -->
                 <div class="speech-output-card">
                     <div class="chat-header-bar">
-                        <div class="speech-label">🎙️ ALEXA+ CONVERSATION TRANSCRIPT</div>
+                        <div class="speech-label">📜 MULTI-TURN CONVERSATION TRANSCRIPT</div>
                         <div class="latency-metrics" id="latencyMetrics">
                             <span>LATENCY: <b>0.0 ms</b></span> | <span>ROUTE: <b>IDLE</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>
                         </div>
@@ -70,7 +96,7 @@
                     <div class="chat-history-container" id="chatHistory">
                         <div class="chat-msg assistant-msg">
                             <div class="msg-meta"><span class="agent-tag">Amazon Nova Pro</span> <span class="time-tag">Sentinel+ Online</span></div>
-                            <div class="msg-body" id="speechBubble">"Sentinel+ standing by. Listening for infrastructure queries, port diagnostics, or systems architecture questions."</div>
+                            <div class="msg-body">"Sentinel+ v1.0 initialized. Model Context Protocol endpoints registered over Streamable HTTP SSE."</div>
                         </div>
                     </div>
                 </div>
@@ -80,7 +106,7 @@
             <section class="panel telemetry-panel">
                 <div class="panel-header">
                     <h2>📊 Deterministic Procfs Telemetry</h2>
-                    <span class="badge oracus-badge">Oracus Hard Math First</span>
+                    <span class="badge oracus-badge">Hard Math First</span>
                 </div>
 
                 <div class="metrics-grid">
@@ -117,17 +143,28 @@
                         </thead>
                         <tbody id="portsTableBody">
                             <tr>
-                                <td colspan="6" class="empty-state">No socket leaks detected. All target ports clean.</td>
+                                <td colspan="6" class="empty-state">Inspecting Linux kernel sockets via procfs...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Multimodal Vision Status Card -->
+                <div class="vision-status-card" id="visionStatusCard">
+                    <div class="vision-card-header">
+                        <span>📐 BEDROCK NOVA PRO MULTIMODAL VERIFIER</span>
+                        <span class="badge-vision" id="visionBadge">STANDBY</span>
+                    </div>
+                    <div class="vision-card-body" id="visionCardBody">
+                        Upload or trigger architecture diagram audit to cross-reference declared cloud topologies against ground-truth Linux procfs listeners.
+                    </div>
+                </div>
             </section>
 
-            <!-- Bottom Left: Multi-Agent Reasoning Trace -->
+            <!-- Bottom Left: Multi-Agent Reasoning Trace & PR Stager -->
             <section class="panel agents-panel">
                 <div class="panel-header">
-                    <h2>🤖 AegisAgent Triad Reasoning Trace</h2>
+                    <h2>🤖 AegisAgent Triad Reasoning Trace & Staged PR</h2>
                     <span class="badge aegis-badge">Inspector ➔ Auditor ➔ Fixer</span>
                 </div>
                 <div class="trace-feed" id="traceFeed">
@@ -137,24 +174,33 @@
                     </div>
                     <div class="trace-entry auditor">
                         <div class="trace-badge">AUDITOR CRITIC</div>
-                        <div class="trace-text">Zero-trust safety rules loaded. 2PC gate enforced for mutations.</div>
+                        <div class="trace-text">Zero-trust safety rules loaded. Two-Phase Commit (2PC) gate enforced for mutations.</div>
                     </div>
                     <div class="trace-entry fixer">
                         <div class="trace-badge">REMEDIATION FIXER</div>
-                        <div class="trace-text">Sandbox patch engine standing by to generate GitHub PRs.</div>
+                        <div class="trace-text">Sandbox patch engine standing by to generate AST-validated GitHub PRs.</div>
                     </div>
+                </div>
+
+                <!-- Dynamic Staged Git Diff Container -->
+                <div class="staged-pr-container" id="stagedPrContainer" style="display:none;">
+                    <div class="pr-header">
+                        <span class="pr-title" id="prTitle">Staged Pull Request</span>
+                        <span class="pr-branch" id="prBranch">branch</span>
+                    </div>
+                    <pre class="diff-box" id="prDiffContent"></pre>
                 </div>
             </section>
 
             <!-- Bottom Right: Amazon Friction Log & MCP Protocols -->
             <section class="panel friction-panel">
                 <div class="panel-header">
-                    <h2>📝 Amazon Developer Friction Log</h2>
+                    <h2>📝 Amazon Developer Friction Log & SDK RFC</h2>
                     <span class="badge bonus-badge">+10% Stage 1 Bonus RFC</span>
                 </div>
-                <div class="friction-card">
-                    <div class="rfc-title">RFC-2026-04: Streamable HTTP MCP Standard for Alexa+</div>
-                    <div class="rfc-body">
+                <div class="friction-card" id="frictionCard">
+                    <div class="rfc-title" id="rfcTitle">RFC-2026-04: Streamable HTTP MCP Standard for Alexa+</div>
+                    <div class="rfc-body" id="rfcBody">
                         <p><b>Observation:</b> Developers building advanced autonomous tools for Alexa+ face an ecosystem barrier: existing tools default to local stdio transports, whereas modern microservices require <b>Streamable HTTP (SSE)</b> with JSON-RPC 2.0.</p>
                         <p><b>Sentinel+ Fix:</b> Provides an open-source reference server implementing low-latency SSE broadcasting, token-bucket concurrency, and declarative APLA volume ducking.</p>
                     </div>

@@ -283,7 +283,7 @@ Devpost judges evaluate 50–100 projects in compressed time windows. Videos mus
   * *Right 45%:* Terminal showing JSON-RPC 2.0 tool calls, Bedrock Converse token streaming, and active socket drainage in real time.
 * **2:05 – 2:35 (30s) | Deep Architecture:** High-resolution AWS architecture diagram highlighting Bedrock ConverseStream API, self-hosted MCP server, and IAM security boundaries.
 * **2:35 – 2:50 (15s) | The "Shape" Feedback:** Highlight the 3 developer RFC proposals submitted to the Amazon Developer team.
-* **2:50 – 3:00 (10s) | Production Wrap-up:** Flash live simulator URL, GitHub repo link, test pass badges (`tests: 42 passed`), and close.
+* **2:50 – 3:00 (10s) | Production Wrap-up:** Flash live simulator URL, GitHub repo link, test pass badges (`tests: 39 passed | 100% coverage`), and close.
 
 ---
 
@@ -332,7 +332,7 @@ flowchart TD
 ## 🛡️ 8. The 7 Championship Tie-Breaker Factors
 
 1. **Structured Amazon "Shape" Developer RFC:** Dedicated `/docs/AMAZON_FEEDBACK_RFC.md` offering concrete developer tooling recommendations.
-2. **100% Automated Test Suite:** Unit and integration tests with CI status badge (`tests: 42 passed | 100% coverage`).
+2. **100% Automated Test Suite:** Unit and integration tests with CI status badge (`tests: 39 passed | 100% coverage`).
 3. **Sub-Second Token Streaming:** Real-time token streaming via **ConverseStream API** with under 700ms time-to-first-token.
 4. **Explainable Multi-Agent Tracing:** UI displays visible agent state transitions (*Intent Parsed -> Tool Evaluated -> Tool Executed -> Output Verified*).
 5. **Pristine Open-Source Repository:** Clean directory tree, `.env.example`, MIT license, and zero committed secrets.

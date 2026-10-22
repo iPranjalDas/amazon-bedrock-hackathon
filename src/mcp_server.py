@@ -45,7 +45,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -156,6 +156,32 @@ MCP_TOOLS_MANIFEST = [
                 "cluster_name": {"type": "string", "default": "all"}
             }
         }
+    },
+    {
+        "name": "sentinel_verify_architecture_diagram",
+        "description": "Uses Amazon Bedrock Nova Pro multimodal vision to parse architecture diagrams and verify against live sockets.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "diagram_path": {"type": "string", "default": "architecture.png"}
+            }
+        }
+    },
+    {
+        "name": "sentinel_generate_github_pr",
+        "description": "Synthesizes an atomic unified diff patch and GitHub PR envelope for unclosed sockets.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target_file": {"type": "string", "default": "server.py"},
+                "port": {"type": "integer", "default": 3000}
+            }
+        }
+    },
+    {
+        "name": "sentinel_get_friction_log",
+        "description": "Returns the complete 6-column Amazon Developer Friction Log and SDK enhancement RFC.",
+        "inputSchema": {"type": "object"}
     }
 ]
 
@@ -178,9 +204,12 @@ def health_check():
 async def sse_telemetry_stream(request: Request):
     """
     Streamable HTTP Server-Sent Events (SSE) channel.
-    Emits real-time telemetry heartbeats and incident events to the Alexa+ Web Simulator.
+    Emits real-time telemetry heartbeats, active port findings, and MCP discovery events.
     """
     async def event_generator():
+        # First emit standard MCP Streamable HTTP endpoint discovery event
+        yield "event: endpoint\ndata: /mcp/call\n\n"
+
         client_connected = True
         step = 0
         while client_connected:
@@ -188,17 +217,22 @@ async def sse_telemetry_stream(request: Request):
                 break
 
             step += 1
-            report = audit_local_sockets()
+            # Dispatch procfs audit to thread pool to avoid blocking asyncio event loop
+            report = await asyncio.to_thread(audit_local_sockets)
             payload = {
                 "step": step,
                 "timestamp": time.time(),
                 "active_listeners": report.active_listeners,
                 "zombies_detected": report.zombies_detected,
+                "total_scanned": report.total_ports_scanned,
                 "status": "NORMAL" if report.zombies_detected == 0 else "ALERT",
-                "summary": report.summary_verdict
+                "summary": report.summary_verdict,
+                "findings": [f.model_dump() for f in report.findings]
             }
 
             yield f"data: {json.dumps(payload)}\n\n"
+            # Periodic SSE comment ping to prevent proxy connection timeout
+            yield ": keep-alive\n\n"
             await asyncio.sleep(3.0)
 
     return StreamingResponse(
@@ -216,19 +250,42 @@ async def sse_telemetry_stream(request: Request):
 async def handle_mcp_jsonrpc(request: Request, authorization: Optional[str] = Header(None)):
     """
     Standard JSON-RPC 2.0 Model Context Protocol Endpoint.
-    Handles tools/list and tools/call requests with zero-trust security checks.
+    Handles initialize, ping, tools/list, and tools/call requests with zero-trust security checks.
     """
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON-RPC payload")
+        return JSONResponse(
+            status_code=400,
+            content={"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error: Invalid JSON-RPC payload"}}
+        )
 
     jsonrpc_id = body.get("id", 1)
     method = body.get("method", "")
     params = body.get("params", {})
 
+    # Protocol Lifecycle: initialize
+    if method == "initialize":
+        return {
+            "jsonrpc": "2.0",
+            "id": jsonrpc_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {"tools": {"listChanged": False}},
+                "serverInfo": {"name": "Sentinel+ Alexa MCP Sentry", "version": "1.0.0"}
+            }
+        }
+
+    # Protocol Lifecycle: notifications/initialized
+    elif method == "notifications/initialized":
+        return Response(status_code=204)
+
+    # Protocol Lifecycle: ping
+    elif method == "ping":
+        return {"jsonrpc": "2.0", "id": jsonrpc_id, "result": {}}
+
     # Method 1: tools/list
-    if method == "tools/list":
+    elif method == "tools/list":
         return {
             "jsonrpc": "2.0",
             "id": jsonrpc_id,
@@ -242,9 +299,10 @@ async def handle_mcp_jsonrpc(request: Request, authorization: Optional[str] = He
         tool_name = params.get("name", "")
         arguments = params.get("arguments", {})
 
-        # Zero-Trust Security Gate
+        # Zero-Trust Security Gate with Cluster Scoping
+        cluster = arguments.get("cluster", "dev")
         sec_ctx = SecurityGatekeeper.verify_and_hydrate(authorization)
-        auth_decision = SecurityGatekeeper.authorize_action(sec_ctx, tool_name)
+        auth_decision = SecurityGatekeeper.authorize_action(sec_ctx, tool_name, cluster=cluster)
         if not auth_decision["authorized"]:
             return {
                 "jsonrpc": "2.0",
@@ -349,6 +407,37 @@ async def handle_mcp_jsonrpc(request: Request, authorization: Optional[str] = He
                 "jsonrpc": "2.0",
                 "id": jsonrpc_id,
                 "result": {"content": [{"type": "text", "text": json.dumps(data)}]}
+            }
+
+        elif tool_name == "sentinel_verify_architecture_diagram":
+            from src.vision_verifier import ArchitectureVisionVerifier
+            verifier = ArchitectureVisionVerifier()
+            rep = verifier.verify_diagram()
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(rep.model_dump())}]}
+            }
+
+        elif tool_name == "sentinel_generate_github_pr":
+            from src.remediation_engine import DynamicRemediationEngine
+            target_file = arguments.get("target_file", "server.py")
+            port = arguments.get("port", 3000)
+            pr = DynamicRemediationEngine.generate_socket_drain_patch(target_file=target_file, port=port)
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(pr.model_dump())}]}
+            }
+
+        elif tool_name == "sentinel_get_friction_log":
+            from src.agent_hierarchy import SentinelOrchestrator
+            orch = SentinelOrchestrator()
+            log_entry = orch._build_friction_log()
+            return {
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": json.dumps(log_entry.model_dump())}]}
             }
 
         else:

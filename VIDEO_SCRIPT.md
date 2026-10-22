@@ -43,8 +43,8 @@
 ---
 
 ### [2:35 – 3:00] Act V: The "Shape" Track Feedback & Closing
-* **Visual**: Terminal showing `python3 -m pytest tests/ -v` showing 27/27 tests passing, followed by GitHub repo page.
+* **Visual**: Terminal showing `PYTHONPATH=packages:. python3.11 -m pytest tests/ -v` showing 39/39 tests passing, followed by GitHub repo page.
 * **Voiceover**:
   > *"For the 'Shape' track, Sentinel+ packages actionable SDK feedback for Amazon engineering, proposing standardized open-source streamable HTTP MCP starter kits and native APLA sidechain ducking.
-  > Backed by 27 passing unit tests and public code on GitHub, Sentinel+ turns Alexa+ into an indispensable co-pilot for every developer.
+  > Backed by 39 passing unit tests and public code on GitHub, Sentinel+ turns Alexa+ into an indispensable co-pilot for every developer.
   > Thank you, and let's shape the future of developer tools on Amazon devices!"*

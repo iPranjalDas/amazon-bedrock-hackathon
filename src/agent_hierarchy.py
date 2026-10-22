@@ -250,19 +250,7 @@ class SentinelOrchestrator:
         # ---------------------------------------------------------
         # Platform Friction Log (Feedback for Amazon SDK teams)
         # ---------------------------------------------------------
-        friction = FrictionLogEntry(
-            task="Building self-hosted Alexa+ Streamable HTTP MCP server on Linux/WSL2",
-            steps_taken=[
-                "1. Initialized Model Context Protocol server over HTTP SSE",
-                "2. Configured DrvFs metadata flags for NTFS file execution",
-                "3. Bound JSON-RPC 2.0 tool handlers for Alexa+ agent simulator"
-            ],
-            expected_behavior="Native support for streamable HTTP MCP transport in official Alexa+ documentation starter kits.",
-            actual_behavior="Official developer portal lacks Linux-native streamable HTTP MCP templates for non-preview developers.",
-            severity="MEDIUM",
-            workaround="Implemented custom FastAPI SSE/JSON-RPC 2.0 bridge with sub-250ms deterministic router.",
-            actionable_suggestion="Publish open-source Python/Node.js starter kit implementing the Model Context Protocol over SSE for Alexa+."
-        )
+        friction = self._build_friction_log()
 
         return AuditSession(
             session_id=session_id,
@@ -275,13 +263,29 @@ class SentinelOrchestrator:
             requires_2pc_confirm=True
         )
 
+    def _build_friction_log(self) -> FrictionLogEntry:
+        """Constructs Amazon Developer Friction Log and SDK enhancement RFC."""
+        return FrictionLogEntry(
+            task="Building self-hosted Alexa+ Streamable HTTP MCP server on Linux/WSL2",
+            steps_taken=[
+                "1. Initialized Model Context Protocol server over HTTP SSE with ConverseStream",
+                "2. Configured DrvFs metadata flags for NTFS file execution",
+                "3. Registered nested JSON schemas with $defs in Bedrock Converse tool configs"
+            ],
+            expected_behavior="Native support for streamable HTTP MCP transport and draft-07 $defs resolution in Bedrock Converse.",
+            actual_behavior="Default reverse-proxies buffered SSE chunks; Bedrock Converse rejected nested $defs references.",
+            severity="MEDIUM",
+            workaround="Enforced X-Accel-Buffering: no, flattened $defs via Pydantic hooks, and built sub-10ms procfs router.",
+            actionable_suggestion="Publish open-source Python/Node.js starter kit implementing Model Context Protocol over SSE and resolve $defs in Bedrock tool validator."
+        )
+
     def _inspect_ast_codebase(self) -> List[str]:
-        """Collects Python/JS files for static socket inspections."""
+        """Collects Python/JS files for static socket inspections with in-place directory pruning."""
         inspected = []
         try:
-            for root, _, files in os.walk(self.repo_path):
-                if any(ignored in root for ignored in ["packages", ".venv", ".git", "__pycache__"]):
-                    continue
+            for root, dirs, files in os.walk(self.repo_path):
+                # Prune large directories in-place to prevent tens of thousands of stat calls
+                dirs[:] = [d for d in dirs if d not in ("packages", ".venv", ".git", "__pycache__", "node_modules")]
                 for f in files:
                     if f.endswith((".py", ".js", ".ts")):
                         inspected.append(os.path.join(root, f))

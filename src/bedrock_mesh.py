@@ -15,6 +15,7 @@ cascading 429 ThrottlingExceptions from breaking voice interactions.
 import os
 import sys
 import time
+import threading
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
@@ -67,23 +68,25 @@ else:
 
 
 class TokenBucketLimiter:
-    """Token bucket rate limiter enforcing a strict calls-per-second ceiling."""
+    """Token bucket rate limiter enforcing a strict calls-per-second ceiling with thread safety."""
     def __init__(self, capacity: int = 10, refill_rate_per_sec: float = 2.0):
         self.capacity = capacity
         self.tokens = float(capacity)
         self.refill_rate = refill_rate_per_sec
         self.last_refill = time.time()
+        self._lock = threading.Lock()
 
     def consume(self, amount: float = 1.0) -> bool:
-        now = time.time()
-        elapsed = now - self.last_refill
-        self.tokens = min(self.capacity, self.tokens + (elapsed * self.refill_rate))
-        self.last_refill = now
+        with self._lock:
+            now = time.time()
+            elapsed = now - self.last_refill
+            self.tokens = min(self.capacity, self.tokens + (elapsed * self.refill_rate))
+            self.last_refill = now
 
-        if self.tokens >= amount:
-            self.tokens -= amount
-            return True
-        return False
+            if self.tokens >= amount:
+                self.tokens -= amount
+                return True
+            return False
 
 
 class CircuitBreaker:
@@ -94,27 +97,45 @@ class CircuitBreaker:
         self.failure_count = 0
         self.last_failure_time = 0.0
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+        self._probe_in_flight = False
+        self._lock = threading.Lock()
 
     def record_success(self):
-        self.failure_count = 0
-        self.state = "CLOSED"
+        with self._lock:
+            self.failure_count = 0
+            self.state = "CLOSED"
+            self._probe_in_flight = False
 
     def record_failure(self):
-        self.failure_count += 1
-        self.last_failure_time = time.time()
-        if self.failure_count >= self.threshold:
-            self.state = "OPEN"
+        with self._lock:
+            self.failure_count += 1
+            self.last_failure_time = time.time()
+            self._probe_in_flight = False
+            if self.failure_count >= self.threshold:
+                self.state = "OPEN"
 
     def allow_request(self) -> bool:
-        if self.state == "CLOSED":
-            return True
-        if self.state == "OPEN":
-            if time.time() - self.last_failure_time > self.cooldown:
-                self.state = "HALF_OPEN"
+        with self._lock:
+            if self.state == "CLOSED":
                 return True
-            return False
-        # HALF_OPEN allows single probe
-        return True
+            if self.state == "OPEN":
+                if time.time() - self.last_failure_time > self.cooldown:
+                    self.state = "HALF_OPEN"
+                    self._probe_in_flight = True
+                    return True
+                return False
+            if self.state == "HALF_OPEN":
+                # Allow strictly 1 probe in flight
+                if not self._probe_in_flight:
+                    self._probe_in_flight = True
+                    return True
+                return False
+            return True
+
+
+# Persistent Shared Mesh Singletons across HTTP/WebSocket/CLI requests
+_GLOBAL_LIMITER = TokenBucketLimiter(capacity=10, refill_rate_per_sec=2.0)
+_GLOBAL_CIRCUIT_BREAKER = CircuitBreaker(failure_threshold=3, cooldown_sec=15.0)
 
 
 class BedrockResiliencyMesh:
@@ -127,9 +148,9 @@ class BedrockResiliencyMesh:
         "anthropic.claude-3-5-sonnet-20241022-v2:0"
     ]
 
-    def __init__(self):
-        self.limiter = TokenBucketLimiter(capacity=10, refill_rate_per_sec=2.0)
-        self.circuit_breaker = CircuitBreaker(failure_threshold=3, cooldown_sec=15.0)
+    def __init__(self, limiter: Optional[TokenBucketLimiter] = None, circuit_breaker: Optional[CircuitBreaker] = None):
+        self.limiter = limiter or _GLOBAL_LIMITER
+        self.circuit_breaker = circuit_breaker or _GLOBAL_CIRCUIT_BREAKER
 
     def dispatch_inference(self, prompt: str, system_prompt: str = "") -> ModelInvocationResult:
         start_t = time.time()
@@ -157,6 +178,8 @@ class BedrockResiliencyMesh:
         if not has_aws or os.getenv("SENTINEL_SIMULATED_BEDROCK", "1") == "1":
             return self._execute_simulated_mesh_reasoning(prompt, start_t)
 
+        return self._execute_live_bedrock_ladder(prompt, system_prompt, start_t)
+
     def dispatch_conversational(self, prompt: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> ModelInvocationResult:
         """
         Routes natural language developer conversations to Amazon Nova Pro on Amazon Bedrock.
@@ -183,7 +206,7 @@ class BedrockResiliencyMesh:
         # Step 3: Check AWS credentials
         has_aws = bool(os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_DEFAULT_REGION"))
         
-        # If running in local simulated demo mode, execute the conversational reasoning engine
+        # If running in local simulated demo mode, execute the local conversational engine
         if not has_aws or os.getenv("SENTINEL_SIMULATED_BEDROCK", "1") == "1":
             return self._execute_simulated_conversational_reasoning(prompt, start_t)
 
@@ -299,18 +322,25 @@ class BedrockResiliencyMesh:
             payload_response={"raw_output": reply}
         )
 
-        # Attempt live Bedrock invocation (Ladder fallback)
+    def _execute_live_bedrock_ladder(self, prompt: str, system_prompt: str, start_t: float) -> ModelInvocationResult:
+        """
+        Executes live Bedrock converse invocation with fallback ladder across:
+        Nova Pro -> Nova Lite -> Claude 3.5 Sonnet -> Deterministic Local Rule Engine.
+        """
         try:
             import boto3
             client = boto3.client("bedrock-runtime", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
             for model_id in self.MODELS_HIERARCHY:
                 try:
-                    # Simulated invoke model call with timeout
-                    resp = client.converse(
-                        modelId=model_id,
-                        messages=[{"role": "user", "content": [{"text": prompt}]}],
-                        inferenceConfig={"maxTokens": 500, "temperature": 0.2}
-                    )
+                    kwargs: Dict[str, Any] = {
+                        "modelId": model_id,
+                        "messages": [{"role": "user", "content": [{"text": prompt}]}],
+                        "inferenceConfig": {"maxTokens": 600, "temperature": 0.2}
+                    }
+                    if system_prompt:
+                        kwargs["system"] = [{"text": system_prompt}]
+
+                    resp = client.converse(**kwargs)
                     self.circuit_breaker.record_success()
                     elapsed = round((time.time() - start_t) * 1000, 2)
                     output_text = resp["output"]["message"]["content"][0]["text"]
@@ -323,9 +353,9 @@ class BedrockResiliencyMesh:
                         payload_response={"raw_output": output_text}
                     )
                 except Exception:
-                    continue  # Try next model in ladder
+                    continue  # Failover to next model in hierarchy
 
-            # If all live models failed, record circuit failure and trigger local fallback
+            # If all remote models in the ladder failed, record failure and trigger local fallback
             self.circuit_breaker.record_failure()
             return self._execute_deterministic_fallback(prompt, "ALL_REMOTE_MODELS_FAILED", start_t)
         except Exception as e:

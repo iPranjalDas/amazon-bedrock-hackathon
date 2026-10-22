@@ -1,0 +1,38 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Sentinel+",
+          "summary": "Autonomous Infrastructure & Code Sentry for Alexa+ using Bedrock and MCP",
+          "description": "Sentinel+ provides real-time infrastructure sentry capabilities for developers. Inspect Linux kernel sockets, predict memory leaks using statistical Z-scores, and stage automated GitHub Pull Requests with Two-Phase Commit safety gates.",
+          "keywords": [
+            "devops",
+            "mcp",
+            "infrastructure",
+            "bedrock",
+            "sentry",
+            "sockets",
+            "developer-tools"
+          ]
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Open Sentinel+ web simulator or connect via Streamable HTTP MCP at /sse and /mcp/call.",
+      "category": "DEVELOPER_TOOLS"
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "https://sentinel-plus.internal.aws/alexa/converse"
+        },
+        "interfaces": [
+          {
+            "type": "ALEXA_PRESENTATION_APLA"
+          }
+        ]
+      }
+    },
+    "manifestVersion": "1.0"
+  }
+}

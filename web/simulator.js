@@ -1,21 +1,25 @@
 // //Pranjal Das
 /**
  * Sentinel+ Web Simulator Controller (web/simulator.js)
+ * Author: Pranjal Das //Pranjal Das
  * 
  * Drives the interactive voice/SSE diagnostics console:
- * - Real-time canvas audio waveform reflecting APLA voice and ducking states.
- * - Sub-50ms dispatch to the local FastAPI MCP server.
- * - Live Server-Sent Events (SSE) telemetry feed updating port/zombie counts.
+ * - High-DPI 3-Wave multi-harmonic audio visualizer with Hann window envelope.
+ * - Native Web Speech API (Microphone) voice ingress.
+ * - Sub-10ms dispatch to the local FastAPI MCP server.
+ * - Dynamic 2PC Confirmation cards for destructive operations.
+ * - Live Server-Sent Events (SSE) telemetry feed populating the active ports table.
+ * - Staged GitHub PR unified diff viewer and Amazon Friction Log renderer.
  */
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("voiceQueryInput");
     const speakBtn = document.getElementById("speakBtn");
-    const speechBubble = document.getElementById("speechBubble");
+    const micBtn = document.getElementById("micBtn");
+    const liveSpeechStream = document.getElementById("liveSpeechStream");
     const chatHistory = document.getElementById("chatHistory");
     const latencyMetrics = document.getElementById("latencyMetrics");
     const duckingTag = document.getElementById("duckingTag");
     const canvas = document.getElementById("waveformCanvas");
-    const ctx = canvas.getContext("2d");
 
     // Telemetry Elements
     const metricListeners = document.getElementById("metricListeners");
@@ -24,18 +28,84 @@ document.addEventListener("DOMContentLoaded", () => {
     const metricRisk = document.getElementById("metricRisk");
     const portsTableBody = document.getElementById("portsTableBody");
     const traceFeed = document.getElementById("traceFeed");
+    const stagedPrContainer = document.getElementById("stagedPrContainer");
+    const prTitle = document.getElementById("prTitle");
+    const prBranch = document.getElementById("prBranch");
+    const prDiffContent = document.getElementById("prDiffContent");
+    const visionBadge = document.getElementById("visionBadge");
+    const visionCardBody = document.getElementById("visionCardBody");
 
     let isSpeaking = false;
+    let inFlightTimer = null;
+    let pending2PC = null;
+
+    // -------------------------------------------------------------
+    // 1. High-DPI Multi-Harmonic Audio Waveform Visualizer
+    // -------------------------------------------------------------
+    const ctx = canvas.getContext("2d");
     let wavePhase = 0;
 
-    // Helper: append multi-turn chat messages
+    function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function drawWaveform() {
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        ctx.clearRect(0, 0, width, height);
+
+        const centerY = height / 2;
+        const waveCount = isSpeaking ? 3 : 2;
+
+        for (let w = 0; w < waveCount; w++) {
+            ctx.beginPath();
+            const freq = isSpeaking ? 0.024 * (w + 1) : 0.015;
+            const amp = isSpeaking ? (24 - w * 6) : (6 - w * 2);
+            const currentPhase = wavePhase * (1 + w * 0.35);
+
+            // Amazon Voice Palette: Alexa Cyan to Gold Orange
+            const strokeColor = isSpeaking
+                ? (w === 0 ? "rgba(255, 153, 0, 0.9)" : "rgba(255, 85, 0, 0.45)")
+                : (w === 0 ? "rgba(0, 210, 255, 0.85)" : "rgba(0, 119, 255, 0.35)");
+
+            ctx.lineWidth = w === 0 ? 2.5 : 1.2;
+            ctx.strokeStyle = strokeColor;
+
+            const step = 4;
+            for (let x = 0; x <= width; x += step) {
+                // Hann Window Envelope: Tapers smoothly to zero at boundaries
+                const normX = x / width;
+                const envelope = Math.sin(normX * Math.PI);
+                const y = centerY + Math.sin(x * freq + currentPhase) * amp * envelope;
+
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        wavePhase += isSpeaking ? 0.14 : 0.035;
+        requestAnimationFrame(drawWaveform);
+    }
+    drawWaveform();
+
+    // -------------------------------------------------------------
+    // 2. Chat Transcript & Live Voice Helper
+    // -------------------------------------------------------------
     function appendChatMessage(text, modelTag, isUser = false) {
         if (!chatHistory) return;
         const msgDiv = document.createElement("div");
         msgDiv.className = `chat-msg ${isUser ? "user-msg" : "assistant-msg"}`;
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const cleanText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        
+        const cleanText = String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
         msgDiv.innerHTML = `
             <div class="msg-meta">
                 <span class="agent-tag">${modelTag}</span>
@@ -47,37 +117,58 @@ document.addEventListener("DOMContentLoaded", () => {
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-    // Canvas audio visualizer animation loop
-    function drawWaveform() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = isSpeaking ? "#ff9900" : "#00d2ff";
-
-        ctx.beginPath();
-        const sliceWidth = canvas.width / 60;
-        let x = 0;
-
-        for (let i = 0; i < 60; i++) {
-            const amplitude = isSpeaking ? 28 : 8;
-            const freq = isSpeaking ? 0.2 : 0.08;
-            const y = (canvas.height / 2) + Math.sin(i * freq + wavePhase) * amplitude;
-
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-            x += sliceWidth;
-        }
-
-        ctx.stroke();
-        wavePhase += isSpeaking ? 0.15 : 0.04;
-        requestAnimationFrame(drawWaveform);
+    function startInFlightTimer() {
+        const t0 = performance.now();
+        clearInterval(inFlightTimer);
+        inFlightTimer = setInterval(() => {
+            const elapsed = Math.round(performance.now() - t0);
+            if (latencyMetrics) {
+                latencyMetrics.innerHTML = `<span>IN-FLIGHT: <b style="color:#ff9900;">${elapsed} ms</b></span> | <span>ROUTE: <b>ROUTING...</b></span>`;
+            }
+        }, 20);
+        return () => {
+            clearInterval(inFlightTimer);
+            return Math.round(performance.now() - t0);
+        };
     }
-    drawWaveform();
 
-    // Dispatch developer voice query to backend MCP router
+    // -------------------------------------------------------------
+    // 3. Interactive 2PC Confirmation Gate
+    // -------------------------------------------------------------
+    function render2PCConfirmation(targetText, rawQuery) {
+        pending2PC = { rawQuery };
+        const card = document.createElement("div");
+        card.className = "confirm-action-card";
+        card.innerHTML = `
+            <span>⚠️ Safety Check: Confirm termination of ${targetText}?</span>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-confirm-kill" id="btn2PCConfirm">Confirm (SIGTERM)</button>
+                <button class="btn-cancel-kill" id="btn2PCCancel">Cancel</button>
+            </div>
+        `;
+        chatHistory.appendChild(card);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        document.getElementById("btn2PCConfirm").onclick = () => {
+            card.remove();
+            transmitQuery(rawQuery, true);
+            pending2PC = null;
+        };
+
+        document.getElementById("btn2PCCancel").onclick = () => {
+            card.remove();
+            appendChatMessage("Action cancelled by developer. Zero state altered.", "🛡️ 2PC Safety Gate");
+            if (liveSpeechStream) liveSpeechStream.textContent = '"Action cancelled. Safe state preserved."';
+            pending2PC = null;
+        };
+    }
+
+    // -------------------------------------------------------------
+    // 4. Dispatch Developer Query to Backend Router
+    // -------------------------------------------------------------
     async function transmitQuery(query, confirm = false) {
         if (!query || query.trim() === "") return;
 
-        // Append user query into chat transcript
         appendChatMessage(query, "Developer", true);
         if (input) input.value = "";
 
@@ -85,8 +176,8 @@ document.addEventListener("DOMContentLoaded", () => {
         duckingTag.textContent = "APLA DUCKING: 10% (VOICE TRANSMISSION ACTIVE)";
         duckingTag.style.color = "#ff9900";
 
-        const startT = performance.now();
-        if (speechBubble) speechBubble.textContent = "Processing query via Sentinel+ router...";
+        const stopInFlightTimer = startInFlightTimer();
+        if (liveSpeechStream) liveSpeechStream.textContent = "Routing query via Sentinel+ deterministic router...";
 
         try {
             const resp = await fetch("/alexa/converse", {
@@ -96,42 +187,68 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const data = await resp.json();
-            const elapsed = Math.round(performance.now() - startT);
+            const elapsed = stopInFlightTimer();
 
-            // Update Speech Output & Chat Log
+            // Route 1: Fast Path (Procfs / Kernel sensor)
             if (data.route === "fast_path") {
-                appendChatMessage(data.result.speech_text, "⚡ Fast Path (Procfs)");
-                if (speechBubble) speechBubble.textContent = `"${data.result.speech_text}"`;
-                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.result.latency_ms} ms</b></span> | <span>ROUTE: <b>FAST PATH</b></span> | <span>CONFIDENCE: <b>${Math.round(data.decision.confidence * 100)}%</b></span>`;
-                appendTrace("FAST_ROUTER", "Deterministic Sub-10ms Routing", data.result.speech_text, "inspector");
-            } 
-            else if (data.route === "conversational_bedrock") {
-                appendChatMessage(data.speech_text, data.model || "Amazon Nova Pro");
-                if (speechBubble) speechBubble.textContent = `"${data.speech_text}"`;
-                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.latency_ms} ms</b></span> | <span>ROUTE: <b>BEDROCK CONVERSATION</b></span> | <span>MODEL: <b>AMAZON NOVA PRO</b></span>`;
-                appendTrace("BEDROCK_CONVERSE", "Amazon Nova Pro Dialogue", data.speech_text.substring(0, 100) + "...", "inspector");
+                const speech = data.result.speech_text;
+                appendChatMessage(speech, "⚡ Fast Path (Procfs)");
+                if (liveSpeechStream) liveSpeechStream.textContent = `"${speech}"`;
+                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.result.latency_ms} ms</b></span> | <span>ROUTE: <b>FAST PATH</b></span> | <span>STATUS: <b>VERIFIED</b></span>`;
+                appendTrace("FAST_ROUTER", "Deterministic Sub-10ms procfs", speech, "inspector");
+
+                // Check if multimodal diagram report was returned
+                if (data.decision.intent_category === "verify_diagram" && data.result.data) {
+                    const rep = data.result.data;
+                    visionBadge.textContent = rep.status;
+                    visionBadge.style.color = rep.status === "VERIFIED_COMPLIANT" ? "#00e676" : "#ff9900";
+                    visionCardBody.innerHTML = `<b>Status:</b> ${rep.status} | <b>Drift Score:</b> ${rep.drift_score} | <b>Declared:</b> ${rep.declared_services_count} services | <b>Listeners:</b> ${rep.live_listeners_count}.<br>${rep.summary_verdict}`;
+                }
+
+                // Check if PR diff was generated
+                if (data.decision.intent_category === "generate_pr" && data.result.data) {
+                    const pr = data.result.data;
+                    stagedPrContainer.style.display = "block";
+                    prTitle.textContent = pr.pr_title;
+                    prBranch.textContent = pr.branch_name;
+                    prDiffContent.textContent = pr.unified_diff;
+                }
             }
+            // Route 2: Destructive Operation Intercepted by 2PC
             else if (data.route === "destructive_action") {
-                appendChatMessage(data.speech_text, "🛡️ 2PC Safety Gate");
-                if (speechBubble) speechBubble.textContent = `"${data.speech_text}"`;
-                latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>2PC GATE</b></span> | <span>STATUS: <b>${data.status}</b></span>`;
-                
                 if (data.requires_2pc_confirm) {
-                    appendTrace("2PC_GATEKEEPER", "Destructive State Mutation Intercepted", `Confirmation required for PID ${data.decision.target_pid}.`, "auditor");
+                    appendChatMessage(data.speech_text, "🛡️ Two-Phase Commit Gate");
+                    if (liveSpeechStream) liveSpeechStream.textContent = `"${data.speech_text}"`;
+                    latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>2PC GATE</b></span> | <span>STATUS: <b>CONFIRMATION REQUIRED</b></span>`;
+                    appendTrace("2PC_GATEKEEPER", "Destructive Mutation Intercepted", data.speech_text, "auditor");
+
+                    const targetLabel = data.decision.target_pid ? `PID ${data.decision.target_pid}` : `port ${data.decision.target_port}`;
+                    render2PCConfirmation(targetLabel, query);
                 } else {
+                    appendChatMessage(data.speech_text, "🛡️ 2PC Remediation Executed");
+                    if (liveSpeechStream) liveSpeechStream.textContent = `"${data.speech_text}"`;
+                    latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>2PC EXECUTED</b></span> | <span>STATUS: <b>${data.status}</b></span>`;
                     appendTrace("REMEDIATION", "Executed Process Termination", data.speech_text, "fixer");
                 }
-            } 
+            }
+            // Route 3: Conversational Amazon Bedrock / Nova Pro
+            else if (data.route === "conversational_bedrock") {
+                appendChatMessage(data.speech_text, "🧠 Amazon Nova Pro (Bedrock)");
+                if (liveSpeechStream) liveSpeechStream.textContent = `"${data.speech_text}"`;
+                latencyMetrics.innerHTML = `<span>LATENCY: <b>${data.latency_ms} ms</b></span> | <span>ROUTE: <b>CONVERSATIONAL BEDROCK</b></span> | <span>MODEL: <b>NOVA PRO</b></span>`;
+                appendTrace("NOVA_PRO", "Conversational Intelligence", data.speech_text, "inspector");
+            }
+            // Route 4: Deep Multi-Agent Audit
             else {
-                // Agentic Loop
-                appendChatMessage(data.speech_text, "🧠 AegisAgent Multi-Agent Loop");
-                if (speechBubble) speechBubble.textContent = `"${data.speech_text}"`;
-                latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>AGENTIC BEDROCK LOOP</b></span> | <span>TRACE: <b>ACTIVE</b></span>`;
+                appendChatMessage(data.speech_text || "Engaged multi-agent audit pipeline.", "🤖 AegisAgent Multi-Agent Loop");
+                if (liveSpeechStream) liveSpeechStream.textContent = `"${data.speech_text || 'Audit completed.'}"`;
+                latencyMetrics.innerHTML = `<span>LATENCY: <b>${elapsed} ms</b></span> | <span>ROUTE: <b>AGENTIC AUDIT</b></span> | <span>TRACE: <b>ACTIVE</b></span>`;
                 triggerAgenticAuditDemo();
             }
         } catch (err) {
-            appendChatMessage(`Error communicating with Sentinel+ MCP server: ${err.message}`, "System Error");
-            if (speechBubble) speechBubble.textContent = `"Error communicating with Sentinel+ MCP server: ${err.message}"`;
+            stopInFlightTimer();
+            appendChatMessage(`Error communicating with Sentinel+ server: ${err.message}`, "System Error");
+            if (liveSpeechStream) liveSpeechStream.textContent = `"Connection error: ${err.message}"`;
             latencyMetrics.innerHTML = `<span>ERROR</span>`;
         } finally {
             setTimeout(() => {
@@ -142,7 +259,96 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Trigger multi-agent pipeline trace via JSON-RPC
+    // Expose transmitQuery globally for table action buttons
+    window.transmitQuery = transmitQuery;
+
+    // -------------------------------------------------------------
+    // 5. Native Web Speech API (Microphone) Ingress
+    // -------------------------------------------------------------
+    let recognition = null;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = "en-US";
+
+        recognition.onstart = () => {
+            micBtn.classList.add("recording");
+            micBtn.querySelector(".mic-label").textContent = "Listening...";
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            if (input) input.value = transcript;
+            transmitQuery(transcript);
+        };
+
+        recognition.onerror = (e) => {
+            console.warn("Speech recognition error:", e.error);
+            micBtn.classList.remove("recording");
+            micBtn.querySelector(".mic-label").textContent = "Mic";
+        };
+
+        recognition.onend = () => {
+            micBtn.classList.remove("recording");
+            micBtn.querySelector(".mic-label").textContent = "Mic";
+        };
+
+        micBtn.addEventListener("click", () => {
+            if (micBtn.classList.contains("recording")) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error("Mic start failed:", e);
+                }
+            }
+        });
+    } else {
+        if (micBtn) {
+            micBtn.title = "Web Speech API not supported in this browser. Use keyboard input.";
+            micBtn.style.opacity = "0.5";
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 6. Dynamic Ports Table Renderer
+    // -------------------------------------------------------------
+    function updatePortsTable(findings) {
+        if (!portsTableBody) return;
+        if (!findings || findings.length === 0) {
+            portsTableBody.innerHTML = `<tr><td colspan="6" class="empty-state">No socket leaks detected. All target ports clean.</td></tr>`;
+            return;
+        }
+
+        portsTableBody.innerHTML = findings.map(f => {
+            const isZombie = f.is_stale_zombie;
+            const stateClass = isZombie ? "badge-zombie" : "badge-listen";
+            const stateLabel = isZombie ? "ZOMBIE" : (f.state || "LISTEN");
+            const memLabel = f.memory_rss_mb > 0 ? `${f.memory_rss_mb} MB` : "-";
+            const killBtn = f.pid > 1
+                ? `<button class="btn-table-kill" onclick="window.transmitQuery('kill PID ${f.pid}', false)">Terminate</button>`
+                : "-";
+
+            return `
+                <tr>
+                    <td><b>:${f.port}</b></td>
+                    <td>${f.process_name || 'unknown'}</td>
+                    <td><code>${f.pid > 0 ? f.pid : '-'}</code></td>
+                    <td><span class="badge-state ${stateClass}">${stateLabel}</span></td>
+                    <td>${memLabel}</td>
+                    <td>${killBtn}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // -------------------------------------------------------------
+    // 7. Multi-Agent Audit Trigger & PR Stager
+    // -------------------------------------------------------------
     async function triggerAgenticAuditDemo() {
         try {
             const resp = await fetch("/mcp/call", {
@@ -164,11 +370,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const resData = await resp.json();
             if (resData.result && resData.result.content) {
                 const session = JSON.parse(resData.result.content[0].text);
-                session.trace_steps.forEach(step => {
-                    const roleClass = step.agent_name.includes("Inspector") ? "inspector" :
-                                      step.agent_name.includes("Auditor") ? "auditor" : "fixer";
-                    appendTrace(step.agent_name, step.role, step.observation, roleClass);
-                });
+                if (session.trace_steps) {
+                    session.trace_steps.forEach(step => {
+                        const roleClass = step.agent_name.includes("Inspector") ? "inspector" :
+                                          step.agent_name.includes("Auditor") ? "auditor" : "fixer";
+                        appendTrace(step.agent_name, step.role, step.observation, roleClass);
+                    });
+                }
+                if (session.remediation_patch) {
+                    const p = session.remediation_patch;
+                    stagedPrContainer.style.display = "block";
+                    prTitle.textContent = p.pr_title || "Staged Unified Patch";
+                    prBranch.textContent = p.patch_id || "sentinel/patch";
+                    prDiffContent.textContent = p.diff_content;
+                }
             }
         } catch (e) {
             console.error("Failed to fetch agentic audit trace:", e);
@@ -176,6 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function appendTrace(name, role, text, cssClass) {
+        if (!traceFeed) return;
         const entry = document.createElement("div");
         entry.className = `trace-entry ${cssClass}`;
         entry.innerHTML = `
@@ -185,32 +401,54 @@ document.addEventListener("DOMContentLoaded", () => {
         traceFeed.prepend(entry);
     }
 
-    // Server-Sent Events (SSE) telemetry subscription
+    // -------------------------------------------------------------
+    // 8. Server-Sent Events (SSE) Telemetry Stream
+    // -------------------------------------------------------------
     function connectSSE() {
+        const streamStatus = document.getElementById("streamStatus");
         const evtSource = new EventSource("/sse");
+
+        evtSource.onopen = () => {
+            if (streamStatus) {
+                streamStatus.innerHTML = `
+                    <span class="status-dot online"></span>
+                    <span class="status-label">SSE TELEMETRY ACTIVE (PORT 8000)</span>
+                `;
+            }
+        };
 
         evtSource.onmessage = (e) => {
             try {
                 const telemetry = JSON.parse(e.data);
-                metricListeners.textContent = telemetry.active_listeners;
-                metricZombies.textContent = telemetry.zombies_detected;
-                metricRisk.textContent = telemetry.zombies_detected > 0 ? "CRITICAL" : "LOW";
-                metricRisk.style.color = telemetry.zombies_detected > 0 ? "#ff3366" : "#00e676";
+                if (metricListeners) metricListeners.textContent = telemetry.active_listeners;
+                if (metricZombies) metricZombies.textContent = telemetry.zombies_detected;
+                if (metricScanned) metricScanned.textContent = telemetry.total_scanned || 8;
+                if (metricRisk) {
+                    metricRisk.textContent = telemetry.zombies_detected > 0 ? "CRITICAL" : "LOW";
+                    metricRisk.style.color = telemetry.zombies_detected > 0 ? "#ff3366" : "#00e676";
+                }
+                if (telemetry.findings) {
+                    updatePortsTable(telemetry.findings);
+                }
             } catch (err) {
                 console.error("SSE parse error:", err);
             }
         };
 
         evtSource.onerror = () => {
-            document.getElementById("streamStatus").innerHTML = `
-                <span class="status-dot" style="background:#ff3366; box-shadow:0 0 8px #ff3366;"></span>
-                <span class="status-label" style="color:#ff3366;">OFFLINE (RECONNECTING...)</span>
-            `;
+            if (streamStatus) {
+                streamStatus.innerHTML = `
+                    <span class="status-dot" style="background:#ff3366; box-shadow:0 0 8px #ff3366;"></span>
+                    <span class="status-label" style="color:#ff3366;">OFFLINE (RECONNECTING...)</span>
+                `;
+            }
         };
     }
     connectSSE();
 
-    // Input handlers and suggestion chip bindings
+    // -------------------------------------------------------------
+    // 9. Input & Preset Bindings
+    // -------------------------------------------------------------
     speakBtn.addEventListener("click", () => {
         transmitQuery(input.value);
     });

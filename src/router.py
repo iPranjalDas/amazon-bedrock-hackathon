@@ -79,6 +79,9 @@ else:
 
 # High-frequency developer status phrases matched via regex for instant response
 FAST_PATH_PATTERNS = [
+    (r"\b(diagram|architecture|visual topology|verify diagram)\b", "verify_diagram"),
+    (r"\b(pr|pull request|unified diff|git patch)\b", "generate_pr"),
+    (r"\b(friction log|shape feedback|amazon rfc)\b", "friction_log"),
     (r"\b(ebpf|tcp state|socket fsm|cgroups?)\b", "ebpf_trace"),
     (r"\b(anomal|leak|predict|z-?score|exhaustion)\b", "anomaly_prediction"),
     (r"\b(fleet|cluster|staging|production|k8s|kubernetes|ecs)\b", "cluster_fleet"),
@@ -90,8 +93,9 @@ FAST_PATH_PATTERNS = [
 
 # Sensitive operations that must be intercepted before mutating system state
 DESTRUCTIVE_PATTERNS = [
-    (r"\b(kill|terminate|stop|drain)\b.*pid\s*(\d+)", "kill_pid"),
     (r"\b(kill|terminate|stop|drain)\b.*port\s*(\d+)", "drain_port"),
+    (r"\b(release|free|clear)\b.*port\s*(\d+)", "drain_port"),
+    (r"\b(kill|terminate|stop|drain)\b(?:\s+(?:process|pid|worker))?\s+(\d+)", "kill_pid"),
     (r"\b(close socket|force release)\b", "force_release")
 ]
 
@@ -229,6 +233,45 @@ def execute_fast_path(decision: RoutingDecision) -> FastPathResult:
             data=mesh_res.model_dump()
         )
 
+    elif intent == "verify_diagram":
+        from src.vision_verifier import ArchitectureVisionVerifier
+        verifier = ArchitectureVisionVerifier()
+        rep = verifier.verify_diagram()
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=f"Architecture verification complete. {rep.declared_services_count} declared services audited against kernel sockets. Drift score: {rep.drift_score}. Status: {rep.status}.",
+            data=rep.model_dump()
+        )
+
+    elif intent == "generate_pr":
+        from src.remediation_engine import DynamicRemediationEngine
+        target_port = decision.target_port or 3000
+        pr = DynamicRemediationEngine.generate_socket_drain_patch("server.py", port=target_port)
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=f"Synthesized atomic unified diff for port {target_port}. AST syntax validated. Branch staged: {pr.branch_name}.",
+            data=pr.model_dump()
+        )
+
+    elif intent == "friction_log":
+        from src.agent_hierarchy import SentinelOrchestrator
+        orch = SentinelOrchestrator()
+        friction = orch._build_friction_log()
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return FastPathResult(
+            success=True,
+            route="fast_path",
+            latency_ms=elapsed_ms,
+            speech_text=f"Amazon Developer Friction Log: Reported {friction.task}. Severity: {friction.severity}. Suggestion: {friction.actionable_suggestion[:100]}...",
+            data=friction.model_dump()
+        )
+
     else:
         # Default socket sentry
         report = audit_local_sockets(target_ports=target_ports)
@@ -266,20 +309,40 @@ def route_and_execute(query: str, confirm_destructive: bool = False) -> Dict[str
         }
 
     elif decision.route == "destructive_action":
+        target_pid = decision.target_pid
+        if target_pid is None and decision.target_port is not None:
+            # Dynamically resolve PID holding target_port
+            from src.socket_sentry import audit_local_sockets
+            report = audit_local_sockets(target_ports=[decision.target_port])
+            for f in report.findings:
+                if f.port == decision.target_port and f.pid and f.pid > 1:
+                    target_pid = f.pid
+                    break
+
         if not confirm_destructive:
+            prompt_target = f"PID {target_pid}" if target_pid else f"service on port {decision.target_port}"
             return {
                 "route": "destructive_action",
                 "status": "CONFIRMATION_REQUIRED",
-                "speech_text": f"Safety check: Are you sure you want to terminate PID {decision.target_pid}? Say 'confirm' to proceed.",
+                "speech_text": f"Safety check: Are you sure you want to terminate {prompt_target}? Say 'confirm' to proceed.",
                 "decision": decision.model_dump(),
-                "requires_2pc_confirm": True
+                "requires_2pc_confirm": True,
+                "resolved_pid": target_pid
             }
         else:
-            term_res = terminate_zombie_process(decision.target_pid, confirm=True)
+            if target_pid is None or target_pid <= 1:
+                return {
+                    "route": "destructive_action",
+                    "status": "ERROR",
+                    "speech_text": f"Cannot terminate: No active process PID found on port {decision.target_port or 'specified'}.",
+                    "decision": decision.model_dump(),
+                    "result": {"success": False, "message": "No PID found"}
+                }
+            term_res = terminate_zombie_process(target_pid, confirm=True)
             msg = (
-                f"Terminated PID {decision.target_pid} successfully."
+                f"Terminated PID {target_pid} successfully."
                 if term_res.get("success") else
-                f"Failed to terminate PID {decision.target_pid}: {term_res.get('message', 'unknown error')}"
+                f"Failed to terminate PID {target_pid}: {term_res.get('message', 'unknown error')}"
             )
             return {
                 "route": "destructive_action",

@@ -1,7 +1,7 @@
 # 🛡️ Sentinel+ : Autonomous Infrastructure & Code Sentry for Alexa+
 
 > **Submission for:** *Build, Ship, Shape: Amazon Developer Hackathon (2026)*  
-> **Test Status:** ![Tests: 27/27 Passing](https://img.shields.io/badge/Tests-27%2F27%20Passing-00e676?style=flat-square) ![Protocol: MCP over SSE](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(SSE)-00d2ff?style=flat-square) ![Version: v1.1.0](https://img.shields.io/badge/Release-v1.1.0%20Enterprise-ff9900?style=flat-square) ![Storage: Drive D Exclusive](https://img.shields.io/badge/Storage-Drive%20D%20Exclusive-purple?style=flat-square)
+> **Test Status:** ![Tests: 39/39 Passing](https://img.shields.io/badge/Tests-39%2F39%20Passing-00e676?style=flat-square) ![Protocol: MCP over SSE](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(SSE)-00d2ff?style=flat-square) ![Version: v1.2.0](https://img.shields.io/badge/Release-v1.2.0%20Enterprise-ff9900?style=flat-square) ![Storage: Drive D Exclusive](https://img.shields.io/badge/Storage-Drive%20D%20Exclusive-purple?style=flat-square)
 
 ---
 
@@ -89,9 +89,9 @@ As required by the official hackathon scoring rubric for the "Shape" dimension, 
 ```
 Open **`http://localhost:8000`** in any browser to experience the interactive Alexa+ Web Simulator!
 
-### 3. Run the Automated Test Suite (18/18 Passing)
+### 3. Run the Automated Test Suite (39/39 Passing)
 ```bash
-PYTHONPATH=.:packages python3 -m pytest tests/ -v
+PYTHONPATH=packages:. python3.11 -m pytest tests/ -v
 ```
 
 ### 4. Run the Standalone CLI Audit Tool

@@ -121,16 +121,26 @@ else:
 
 def _hex_to_ip_port(hex_str: str) -> Tuple[str, int]:
     """
-    Decodes Linux /proc/net/tcp address representations.
+    Decodes Linux /proc/net/tcp and /proc/net/tcp6 address representations.
+    Handles both IPv4 and IPv6 little-endian hex sequences.
     Example: '0100007F:1F90' -> ('127.0.0.1', 8080)
     """
     try:
         ip_hex, port_hex = hex_str.split(":")
         port = int(port_hex, 16)
-        # Linux stores IPv4 in little-endian order in /proc/net/tcp
-        ip_parts = [str(int(ip_hex[i:i+2], 16)) for i in (6, 4, 2, 0)]
-        ip = ".".join(ip_parts)
-        return ip, port
+        if len(ip_hex) == 32:
+            import socket
+            words = [ip_hex[i:i+8] for i in range(0, 32, 8)]
+            raw_bytes = b"".join(bytes.fromhex(w)[::-1] for w in words)
+            ip = socket.inet_ntop(socket.AF_INET6, raw_bytes)
+            if ip.startswith("::ffff:"):
+                ip = ip.replace("::ffff:", "")
+            return ip, port
+        else:
+            # Linux stores IPv4 in little-endian order in /proc/net/tcp
+            ip_parts = [str(int(ip_hex[i:i+2], 16)) for i in (6, 4, 2, 0)]
+            ip = ".".join(ip_parts)
+            return ip, port
     except Exception:
         return "0.0.0.0", 0
 
@@ -203,11 +213,22 @@ def read_cgroup_memory_pressure() -> CgroupMemoryMetrics:
             pass
 
     # Heuristic fallback if running outside a restricted container
-    if current_bytes == 0:
+    if max_bytes is None:
         try:
             with open("/proc/meminfo", "r", encoding="utf-8") as f:
                 for line in f:
                     if line.startswith("MemTotal:"):
+                        total_kb = int(line.split()[1])
+                        max_bytes = total_kb * 1024
+                        break
+        except Exception:
+            pass
+
+    if current_bytes == 0:
+        try:
+            with open("/proc/meminfo", "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("MemTotal:") and not max_bytes:
                         total_kb = int(line.split()[1])
                         max_bytes = total_kb * 1024
                     elif line.startswith("MemAvailable:"):

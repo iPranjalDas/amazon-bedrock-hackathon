@@ -184,6 +184,11 @@ def evaluate_system_anomalies(
         report = audit_local_sockets()
         active_process_pids = [f.pid for f in report.findings if f.pid > 0]
 
+    # Periodic cleanup: Prune dead PIDs from metric registry to prevent unbounded memory growth
+    dead_keys = [k for k in list(_METRIC_STORE.keys()) if k.startswith("proc_rss_pid_") and not os.path.exists(f"/proc/{k.split('_')[-1]}")]
+    for k in dead_keys:
+        _METRIC_STORE.pop(k, None)
+
     findings: List[AnomalyFinding] = []
     anomalies_detected = 0
     highest_severity = "LOW"
@@ -201,7 +206,8 @@ def evaluate_system_anomalies(
         is_leak = slope_min > 2.0 and z_score >= 1.8
         tte = None
         if is_leak and slope_min > 0.1:
-            tte = round(available_memory_mb / slope_min, 1)
+            headroom_mb = max(10.0, available_memory_mb - rss_mb)
+            tte = round(headroom_mb / slope_min, 1)
 
         severity = "LOW"
         if is_leak:
